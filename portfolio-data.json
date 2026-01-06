@@ -11,22 +11,22 @@
           "symbol": "EUSA",
           "targetPercent": 35,
           "targetValue": 2660,
-          "shares": 0,
-          "costBasis": 0
+          "shares": 25.579382,
+          "costBasis": 103.99
         },
         {
           "symbol": "QQOE",
           "targetPercent": 40,
           "targetValue": 3040,
-          "shares": 0,
-          "costBasis": 0
+          "shares": 29.693299,
+          "costBasis": 102.38
         },
         {
           "symbol": "KHC",
           "targetPercent": 25,
           "targetValue": 1900,
-          "shares": 0,
-          "costBasis": 0
+          "shares": 113.874757,
+          "costBasis": 28.30
         }
       ]
     },
@@ -36,18 +36,20 @@
       "targetValue": 4000,
       "holdings": [
         {
-          "symbol": "VXUS",
-          "targetPercent": 70,
-          "targetValue": 2800,
-          "shares": 0,
-          "costBasis": 0
+          "symbol": "IEFA",
+          "name": "IEFA (Developed Markets)",
+          "targetPercent": 60,
+          "targetValue": 2400,
+          "shares": 26.616391,
+          "costBasis": 90.17
         },
         {
-          "symbol": "EMXC",
-          "targetPercent": 30,
-          "targetValue": 1200,
-          "shares": 0,
-          "costBasis": 0
+          "symbol": "VWO",
+          "name": "VWO (Emerging Markets)",
+          "targetPercent": 40,
+          "targetValue": 1600,
+          "shares": 29.165147,
+          "costBasis": 54.86
         }
       ]
     },
@@ -60,22 +62,22 @@
           "symbol": "GLD",
           "targetPercent": 40,
           "targetValue": 1200,
-          "shares": 0,
-          "costBasis": 0
+          "shares": 3.014431,
+          "costBasis": 398.09
         },
         {
           "symbol": "XLE",
           "targetPercent": 30,
           "targetValue": 900,
-          "shares": 0,
-          "costBasis": 0
+          "shares": 19.812878,
+          "costBasis": 45.43
         },
         {
           "symbol": "ITA",
           "targetPercent": 30,
           "targetValue": 900,
-          "shares": 0,
-          "costBasis": 0
+          "shares": 4.116261,
+          "costBasis": 218.65
         }
       ]
     },
@@ -85,20 +87,20 @@
       "targetValue": 3400,
       "holdings": [
         {
-          "symbol": "SPX_OPTIONS",
-          "name": "SPX Put Ratio Backspreads",
+          "symbol": "XSP_OPTIONS",
+          "name": "XSP Put Ratio Backspreads",
           "targetPercent": 59,
           "targetValue": 2000,
-          "manualValue": 0,
+          "manualValue": 1861,
           "isManual": true
         },
         {
           "symbol": "SGOV",
-          "name": "Cash (SGOV/BIL)",
+          "name": "Cash (SGOV)",
           "targetPercent": 41,
           "targetValue": 1400,
-          "shares": 0,
-          "costBasis": 0
+          "shares": 13.93,
+          "costBasis": 100.48
         }
       ]
     },
@@ -109,11 +111,11 @@
       "holdings": [
         {
           "symbol": "SGOV",
-          "name": "SGOV or BIL",
+          "name": "SGOV",
           "targetPercent": 100,
           "targetValue": 2000,
-          "shares": 0,
-          "costBasis": 0
+          "shares": 19.90,
+          "costBasis": 100.48
         }
       ]
     }
