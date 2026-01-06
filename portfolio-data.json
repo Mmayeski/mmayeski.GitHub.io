@@ -1,0 +1,122 @@
+{
+  "totalPortfolioValue": 20000,
+  "apiKey": "NB1LJBO6AXQEATGS",
+  "legs": [
+    {
+      "name": "US Equities",
+      "targetPercent": 38,
+      "targetValue": 7600,
+      "holdings": [
+        {
+          "symbol": "EUSA",
+          "targetPercent": 35,
+          "targetValue": 2660,
+          "shares": 0,
+          "costBasis": 0
+        },
+        {
+          "symbol": "QQOE",
+          "targetPercent": 40,
+          "targetValue": 3040,
+          "shares": 0,
+          "costBasis": 0
+        },
+        {
+          "symbol": "KHC",
+          "targetPercent": 25,
+          "targetValue": 1900,
+          "shares": 0,
+          "costBasis": 0
+        }
+      ]
+    },
+    {
+      "name": "International",
+      "targetPercent": 20,
+      "targetValue": 4000,
+      "holdings": [
+        {
+          "symbol": "VXUS",
+          "targetPercent": 70,
+          "targetValue": 2800,
+          "shares": 0,
+          "costBasis": 0
+        },
+        {
+          "symbol": "EMXC",
+          "targetPercent": 30,
+          "targetValue": 1200,
+          "shares": 0,
+          "costBasis": 0
+        }
+      ]
+    },
+    {
+      "name": "Satellite",
+      "targetPercent": 15,
+      "targetValue": 3000,
+      "holdings": [
+        {
+          "symbol": "GLD",
+          "targetPercent": 40,
+          "targetValue": 1200,
+          "shares": 0,
+          "costBasis": 0
+        },
+        {
+          "symbol": "XLE",
+          "targetPercent": 30,
+          "targetValue": 900,
+          "shares": 0,
+          "costBasis": 0
+        },
+        {
+          "symbol": "ITA",
+          "targetPercent": 30,
+          "targetValue": 900,
+          "shares": 0,
+          "costBasis": 0
+        }
+      ]
+    },
+    {
+      "name": "Options/Cash",
+      "targetPercent": 17,
+      "targetValue": 3400,
+      "holdings": [
+        {
+          "symbol": "SPX_OPTIONS",
+          "name": "SPX Put Ratio Backspreads",
+          "targetPercent": 59,
+          "targetValue": 2000,
+          "manualValue": 0,
+          "isManual": true
+        },
+        {
+          "symbol": "SGOV",
+          "name": "Cash (SGOV/BIL)",
+          "targetPercent": 41,
+          "targetValue": 1400,
+          "shares": 0,
+          "costBasis": 0
+        }
+      ]
+    },
+    {
+      "name": "Fixed Income",
+      "targetPercent": 10,
+      "targetValue": 2000,
+      "holdings": [
+        {
+          "symbol": "SGOV",
+          "name": "SGOV or BIL",
+          "targetPercent": 100,
+          "targetValue": 2000,
+          "shares": 0,
+          "costBasis": 0
+        }
+      ]
+    }
+  ],
+  "historicalData": []
+}
