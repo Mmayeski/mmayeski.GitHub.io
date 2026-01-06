@@ -1,6 +1,6 @@
 {
   "totalPortfolioValue": 20000,
-  "apiKey": "YOUR_ALPHAVANTAGE_API_KEY_HERE",
+  "apiKey": "NB1LJBO6AXQEATGS",
   "legs": [
     {
       "name": "US Equities",
