@@ -341,18 +341,36 @@
 
         async function loadData() {
             try {
-                // Try to load from localStorage first
+                // Always load from JSON file first to get latest structure
+                const response = await fetch('portfolio-data.json');
+                const jsonData = await response.json();
+
+                // Try to merge with localStorage if it exists and has historical data
                 const localData = localStorage.getItem('portfolioData');
                 if (localData) {
-                    portfolioData = JSON.parse(localData);
-                } else {
-                    // Fall back to JSON file
-                    const response = await fetch('portfolio-data.json');
-                    portfolioData = await response.json();
+                    const localParsed = JSON.parse(localData);
+                    // Keep historical data and current prices from localStorage
+                    if (localParsed.historicalData && localParsed.historicalData.length > 0) {
+                        jsonData.historicalData = localParsed.historicalData;
+                    }
+                    // Keep current prices if they exist
+                    jsonData.legs.forEach((leg, legIdx) => {
+                        leg.holdings.forEach((holding, holdingIdx) => {
+                            if (localParsed.legs[legIdx] && localParsed.legs[legIdx].holdings[holdingIdx]) {
+                                const localHolding = localParsed.legs[legIdx].holdings[holdingIdx];
+                                if (localHolding.currentPrice) {
+                                    holding.currentPrice = localHolding.currentPrice;
+                                }
+                            }
+                        });
+                    });
                 }
+
+                portfolioData = jsonData;
+                console.log('Portfolio data loaded:', portfolioData);
             } catch (error) {
                 console.error('Error loading data:', error);
-                showStatus('Error loading portfolio data', true);
+                alert('Error loading portfolio data. Check console for details.');
             }
         }
 
@@ -372,58 +390,64 @@
             }
 
             const data = prepareTreemapData(portfolioData, 'target');
+            console.log('Target chart data:', data);
 
-            targetChart = new Chart(ctx, {
-                type: 'treemap',
-                data: {
-                    datasets: [{
-                        tree: data.tree,
-                        key: 'value',
-                        groups: ['leg', 'holding'],
-                        spacing: 1,
-                        borderWidth: 2,
-                        borderColor: 'white',
-                        backgroundColor: (ctx) => {
-                            if (!ctx.raw) return 'transparent';
-                            return colors[ctx.dataIndex % colors.length];
-                        },
-                        labels: {
-                            display: true,
-                            formatter: (ctx) => {
-                                if (!ctx.raw) return '';
-                                const percent = ((ctx.raw.v / portfolioData.totalPortfolioValue) * 100).toFixed(1);
-                                return `${ctx.raw._data.label}\n${percent}%\n$${ctx.raw.v.toLocaleString()}`;
+            try {
+                targetChart = new Chart(ctx, {
+                    type: 'treemap',
+                    data: {
+                        datasets: [{
+                            tree: data.tree,
+                            key: 'value',
+                            groups: ['leg', 'holding'],
+                            spacing: 1,
+                            borderWidth: 2,
+                            borderColor: 'white',
+                            backgroundColor: (ctx) => {
+                                if (!ctx.raw) return 'transparent';
+                                return colors[ctx.dataIndex % colors.length];
                             },
-                            color: 'white',
-                            font: {
-                                size: 12,
-                                weight: 'bold'
+                            labels: {
+                                display: true,
+                                formatter: (ctx) => {
+                                    if (!ctx.raw) return '';
+                                    const percent = ((ctx.raw.v / portfolioData.totalPortfolioValue) * 100).toFixed(1);
+                                    return `${ctx.raw._data.label}\n${percent}%\n$${ctx.raw.v.toLocaleString()}`;
+                                },
+                                color: 'white',
+                                font: {
+                                    size: 12,
+                                    weight: 'bold'
+                                }
                             }
-                        }
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: true,
-                    plugins: {
-                        legend: {
-                            display: false
-                        },
-                        tooltip: {
-                            callbacks: {
-                                title: (items) => items[0].raw._data.label,
-                                label: (item) => {
-                                    const value = item.raw.v;
-                                    const percent = ((value / portfolioData.totalPortfolioValue) * 100).toFixed(2);
-                                    return `$${value.toLocaleString()} (${percent}%)`;
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    title: (items) => items[0].raw._data.label,
+                                    label: (item) => {
+                                        const value = item.raw.v;
+                                        const percent = ((value / portfolioData.totalPortfolioValue) * 100).toFixed(2);
+                                        return `$${value.toLocaleString()} (${percent}%)`;
+                                    }
                                 }
                             }
                         }
                     }
-                }
-            });
+                });
 
-            renderLegend('targetLegend', data.legend);
+                renderLegend('targetLegend', data.legend);
+            } catch (error) {
+                console.error('Error rendering target chart:', error);
+                document.getElementById('targetChart').parentElement.innerHTML += '<p style="color: red;">Error rendering chart. Check console.</p>';
+            }
         }
 
         async function renderCurrentChart() {
@@ -436,60 +460,66 @@
             // Calculate current values
             const currentData = await calculateCurrentValues();
             const data = prepareTreemapData(currentData, 'current');
+            console.log('Current chart data:', data);
 
-            currentChart = new Chart(ctx, {
-                type: 'treemap',
-                data: {
-                    datasets: [{
-                        tree: data.tree,
-                        key: 'value',
-                        groups: ['leg', 'holding'],
-                        spacing: 1,
-                        borderWidth: 2,
-                        borderColor: 'white',
-                        backgroundColor: (ctx) => {
-                            if (!ctx.raw) return 'transparent';
-                            return colors[ctx.dataIndex % colors.length];
-                        },
-                        labels: {
-                            display: true,
-                            formatter: (ctx) => {
-                                if (!ctx.raw) return '';
-                                const totalValue = currentData.totalPortfolioValue || portfolioData.totalPortfolioValue;
-                                const percent = ((ctx.raw.v / totalValue) * 100).toFixed(1);
-                                return `${ctx.raw._data.label}\n${percent}%\n$${ctx.raw.v.toLocaleString()}`;
+            try {
+                currentChart = new Chart(ctx, {
+                    type: 'treemap',
+                    data: {
+                        datasets: [{
+                            tree: data.tree,
+                            key: 'value',
+                            groups: ['leg', 'holding'],
+                            spacing: 1,
+                            borderWidth: 2,
+                            borderColor: 'white',
+                            backgroundColor: (ctx) => {
+                                if (!ctx.raw) return 'transparent';
+                                return colors[ctx.dataIndex % colors.length];
                             },
-                            color: 'white',
-                            font: {
-                                size: 12,
-                                weight: 'bold'
-                            }
-                        }
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: true,
-                    plugins: {
-                        legend: {
-                            display: false
-                        },
-                        tooltip: {
-                            callbacks: {
-                                title: (items) => items[0].raw._data.label,
-                                label: (item) => {
-                                    const value = item.raw.v;
+                            labels: {
+                                display: true,
+                                formatter: (ctx) => {
+                                    if (!ctx.raw) return '';
                                     const totalValue = currentData.totalPortfolioValue || portfolioData.totalPortfolioValue;
-                                    const percent = ((value / totalValue) * 100).toFixed(2);
-                                    return `$${value.toLocaleString()} (${percent}%)`;
+                                    const percent = ((ctx.raw.v / totalValue) * 100).toFixed(1);
+                                    return `${ctx.raw._data.label}\n${percent}%\n$${ctx.raw.v.toLocaleString()}`;
+                                },
+                                color: 'white',
+                                font: {
+                                    size: 12,
+                                    weight: 'bold'
+                                }
+                            }
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    title: (items) => items[0].raw._data.label,
+                                    label: (item) => {
+                                        const value = item.raw.v;
+                                        const totalValue = currentData.totalPortfolioValue || portfolioData.totalPortfolioValue;
+                                        const percent = ((value / totalValue) * 100).toFixed(2);
+                                        return `$${value.toLocaleString()} (${percent}%)`;
+                                    }
                                 }
                             }
                         }
                     }
-                }
-            });
+                });
 
-            renderLegend('currentLegend', data.legend);
+                renderLegend('currentLegend', data.legend);
+            } catch (error) {
+                console.error('Error rendering current chart:', error);
+                document.getElementById('currentChart').parentElement.innerHTML += '<p style="color: red;">Error rendering chart. Check console.</p>';
+            }
         }
 
         function prepareTreemapData(data, type) {
@@ -511,17 +541,16 @@
                         label: label
                     });
 
-                    if (type === 'target') {
-                        legend.push({
-                            label: `${leg.name} - ${label}`,
-                            value: holdingValue,
-                            color: colors[colorIndex % colors.length]
-                        });
-                        colorIndex++;
-                    }
+                    legend.push({
+                        label: `${leg.name} - ${label}`,
+                        value: holdingValue,
+                        color: colors[colorIndex % colors.length]
+                    });
+                    colorIndex++;
                 });
             });
 
+            console.log(`Prepared ${type} treemap data:`, { tree, legend });
             return { tree, legend };
         }
 
