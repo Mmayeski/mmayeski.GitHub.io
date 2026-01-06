@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portfolio Tracker</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-treemap@2.3.0/dist/chartjs-chart-treemap.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        header {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 300;
+            color: #333;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .heatmaps {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .chart-container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .chart-title {
+            font-size: 1.5rem;
+            font-weight: 400;
+            color: #333;
+        }
+
+        .chart-subtitle {
+            font-size: 0.9rem;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        canvas {
+            max-height: 500px;
+        }
+
+        .performance-chart {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background: white;
+            margin: 50px auto;
+            padding: 40px;
+            border-radius: 12px;
+            max-width: 800px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            line-height: 20px;
+        }
+
+        .close:hover {
+            color: #000;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        input[type="text"],
+        input[type="number"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .holdings-grid {
+            display: grid;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .holding-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .holding-card h4 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .holding-inputs {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .status {
+            background: #e8f5e9;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #4caf50;
+        }
+
+        .error {
+            background: #ffebee;
+            border-left-color: #f44336;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+
+        @media (max-width: 1024px) {
+            .heatmaps {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .legend-container {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .legend-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .legend-item:last-child {
+            border-bottom: none;
+        }
+
+        .legend-label {
+            font-weight: 500;
+        }
+
+        .legend-value {
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Portfolio Tracker</h1>
+            <div class="controls">
+                <button onclick="openDataModal()">Manage Data</button>
+                <button onclick="refreshPrices()">Refresh Prices</button>
+            </div>
+        </header>
+
+        <div class="heatmaps">
+            <div class="chart-container">
+                <div class="chart-header">
+                    <div>
+                        <div class="chart-title">Target Allocation</div>
+                        <div class="chart-subtitle">Your portfolio goals</div>
+                    </div>
+                </div>
+                <canvas id="targetChart"></canvas>
+                <div id="targetLegend" class="legend-container"></div>
+            </div>
+
+            <div class="chart-container">
+                <div class="chart-header">
+                    <div>
+                        <div class="chart-title">Current Allocation</div>
+                        <div class="chart-subtitle">Based on latest prices</div>
+                    </div>
+                </div>
+                <canvas id="currentChart"></canvas>
+                <div id="currentLegend" class="legend-container"></div>
+            </div>
+        </div>
+
+        <div class="performance-chart">
+            <div class="chart-header">
+                <div>
+                    <div class="chart-title">Portfolio Performance</div>
+                    <div class="chart-subtitle">Profit/Loss since inception</div>
+                </div>
+            </div>
+            <canvas id="performanceChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Data Management Modal -->
+    <div id="dataModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeDataModal()">&times;</span>
+            <h2>Manage Portfolio Data</h2>
+            <div id="statusMessage"></div>
+
+            <div class="form-group">
+                <label for="apiKey">Alpha Vantage API Key:</label>
+                <input type="text" id="apiKey" placeholder="Enter your API key">
+            </div>
+
+            <div id="holdingsForm"></div>
+
+            <div style="margin-top: 30px; display: flex; gap: 10px;">
+                <button onclick="saveData()">Save Data</button>
+                <button onclick="exportData()">Export JSON</button>
+                <button onclick="importData()">Import JSON</button>
+            </div>
+            <input type="file" id="fileInput" style="display: none;" accept=".json" onchange="handleFileImport(event)">
+        </div>
+    </div>
+
+    <script>
+        let portfolioData = null;
+        let targetChart = null;
+        let currentChart = null;
+        let performanceChart = null;
+
+        // Color palette for charts
+        const colors = [
+            '#667eea', '#764ba2', '#f093fb', '#4facfe',
+            '#43e97b', '#fa709a', '#feca57', '#48dbfb',
+            '#ff6b6b', '#ee5a6f', '#c44569', '#6c5ce7'
+        ];
+
+        // Initialize on page load
+        window.addEventListener('load', async () => {
+            await loadData();
+            renderCharts();
+        });
+
+        async function loadData() {
+            try {
+                // Try to load from localStorage first
+                const localData = localStorage.getItem('portfolioData');
+                if (localData) {
+                    portfolioData = JSON.parse(localData);
+                } else {
+                    // Fall back to JSON file
+                    const response = await fetch('portfolio-data.json');
+                    portfolioData = await response.json();
+                }
+            } catch (error) {
+                console.error('Error loading data:', error);
+                showStatus('Error loading portfolio data', true);
+            }
+        }
+
+        function renderCharts() {
+            if (!portfolioData) return;
+
+            renderTargetChart();
+            renderCurrentChart();
+            renderPerformanceChart();
+        }
+
+        function renderTargetChart() {
+            const ctx = document.getElementById('targetChart').getContext('2d');
+
+            if (targetChart) {
+                targetChart.destroy();
+            }
+
+            const data = prepareTreemapData(portfolioData, 'target');
+
+            targetChart = new Chart(ctx, {
+                type: 'treemap',
+                data: {
+                    datasets: [{
+                        tree: data.tree,
+                        key: 'value',
+                        groups: ['leg', 'holding'],
+                        spacing: 1,
+                        borderWidth: 2,
+                        borderColor: 'white',
+                        backgroundColor: (ctx) => {
+                            if (!ctx.raw) return 'transparent';
+                            return colors[ctx.dataIndex % colors.length];
+                        },
+                        labels: {
+                            display: true,
+                            formatter: (ctx) => {
+                                if (!ctx.raw) return '';
+                                const percent = ((ctx.raw.v / portfolioData.totalPortfolioValue) * 100).toFixed(1);
+                                return `${ctx.raw._data.label}\n${percent}%\n$${ctx.raw.v.toLocaleString()}`;
+                            },
+                            color: 'white',
+                            font: {
+                                size: 12,
+                                weight: 'bold'
+                            }
+                        }
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                title: (items) => items[0].raw._data.label,
+                                label: (item) => {
+                                    const value = item.raw.v;
+                                    const percent = ((value / portfolioData.totalPortfolioValue) * 100).toFixed(2);
+                                    return `$${value.toLocaleString()} (${percent}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            renderLegend('targetLegend', data.legend);
+        }
+
+        async function renderCurrentChart() {
+            const ctx = document.getElementById('currentChart').getContext('2d');
+
+            if (currentChart) {
+                currentChart.destroy();
+            }
+
+            // Calculate current values
+            const currentData = await calculateCurrentValues();
+            const data = prepareTreemapData(currentData, 'current');
+
+            currentChart = new Chart(ctx, {
+                type: 'treemap',
+                data: {
+                    datasets: [{
+                        tree: data.tree,
+                        key: 'value',
+                        groups: ['leg', 'holding'],
+                        spacing: 1,
+                        borderWidth: 2,
+                        borderColor: 'white',
+                        backgroundColor: (ctx) => {
+                            if (!ctx.raw) return 'transparent';
+                            return colors[ctx.dataIndex % colors.length];
+                        },
+                        labels: {
+                            display: true,
+                            formatter: (ctx) => {
+                                if (!ctx.raw) return '';
+                                const totalValue = currentData.totalPortfolioValue || portfolioData.totalPortfolioValue;
+                                const percent = ((ctx.raw.v / totalValue) * 100).toFixed(1);
+                                return `${ctx.raw._data.label}\n${percent}%\n$${ctx.raw.v.toLocaleString()}`;
+                            },
+                            color: 'white',
+                            font: {
+                                size: 12,
+                                weight: 'bold'
+                            }
+                        }
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                title: (items) => items[0].raw._data.label,
+                                label: (item) => {
+                                    const value = item.raw.v;
+                                    const totalValue = currentData.totalPortfolioValue || portfolioData.totalPortfolioValue;
+                                    const percent = ((value / totalValue) * 100).toFixed(2);
+                                    return `$${value.toLocaleString()} (${percent}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            renderLegend('currentLegend', data.legend);
+        }
+
+        function prepareTreemapData(data, type) {
+            const tree = [];
+            const legend = [];
+            let colorIndex = 0;
+
+            data.legs.forEach((leg, legIndex) => {
+                const legValue = type === 'target' ? leg.targetValue : leg.currentValue || leg.targetValue;
+
+                leg.holdings.forEach((holding, holdingIndex) => {
+                    const holdingValue = type === 'target' ? holding.targetValue : holding.currentValue || holding.targetValue;
+                    const label = holding.symbol || holding.name;
+
+                    tree.push({
+                        leg: leg.name,
+                        holding: label,
+                        value: holdingValue,
+                        label: label
+                    });
+
+                    if (type === 'target') {
+                        legend.push({
+                            label: `${leg.name} - ${label}`,
+                            value: holdingValue,
+                            color: colors[colorIndex % colors.length]
+                        });
+                        colorIndex++;
+                    }
+                });
+            });
+
+            return { tree, legend };
+        }
+
+        function renderLegend(elementId, legendData) {
+            const container = document.getElementById(elementId);
+            container.innerHTML = legendData.map((item, index) => `
+                <div class="legend-item">
+                    <span class="legend-label">
+                        <span style="display: inline-block; width: 12px; height: 12px; background: ${item.color}; margin-right: 8px; border-radius: 2px;"></span>
+                        ${item.label}
+                    </span>
+                    <span class="legend-value">$${item.value.toLocaleString()}</span>
+                </div>
+            `).join('');
+        }
+
+        async function calculateCurrentValues() {
+            const currentData = JSON.parse(JSON.stringify(portfolioData));
+            let totalCurrentValue = 0;
+
+            for (let leg of currentData.legs) {
+                let legTotal = 0;
+
+                for (let holding of leg.holdings) {
+                    if (holding.isManual) {
+                        holding.currentValue = holding.manualValue || 0;
+                    } else if (holding.shares > 0) {
+                        // This will be updated when we fetch prices
+                        holding.currentValue = holding.shares * (holding.currentPrice || holding.costBasis || 0);
+                    } else {
+                        holding.currentValue = holding.targetValue;
+                    }
+                    legTotal += holding.currentValue;
+                }
+
+                leg.currentValue = legTotal;
+                totalCurrentValue += legTotal;
+            }
+
+            currentData.totalPortfolioValue = totalCurrentValue;
+            return currentData;
+        }
+
+        function renderPerformanceChart() {
+            const ctx = document.getElementById('performanceChart').getContext('2d');
+
+            if (performanceChart) {
+                performanceChart.destroy();
+            }
+
+            // Prepare historical data
+            const historicalData = portfolioData.historicalData || [];
+            const labels = historicalData.map(d => d.date);
+            const values = historicalData.map(d => d.profitLoss);
+
+            performanceChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Profit/Loss',
+                        data: values,
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: '#667eea'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            callbacks: {
+                                label: (context) => {
+                                    const value = context.parsed.y;
+                                    const sign = value >= 0 ? '+' : '';
+                                    return `${sign}$${value.toLocaleString()}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: (value) => {
+                                    const sign = value >= 0 ? '+' : '';
+                                    return `${sign}$${value.toLocaleString()}`;
+                                }
+                            },
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.05)'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        async function refreshPrices() {
+            if (!portfolioData.apiKey || portfolioData.apiKey === 'YOUR_ALPHAVANTAGE_API_KEY_HERE') {
+                showStatus('Please set your Alpha Vantage API key first', true);
+                return;
+            }
+
+            showStatus('Fetching latest prices...');
+
+            try {
+                for (let leg of portfolioData.legs) {
+                    for (let holding of leg.holdings) {
+                        if (!holding.isManual && holding.symbol) {
+                            const price = await fetchStockPrice(holding.symbol);
+                            if (price) {
+                                holding.currentPrice = price;
+                                holding.currentValue = holding.shares * price;
+                            }
+                            // Add delay to avoid API rate limits
+                            await sleep(12000); // Alpha Vantage free tier: 5 calls per minute
+                        }
+                    }
+                }
+
+                // Calculate total profit/loss
+                const totalCost = calculateTotalCost();
+                const totalCurrent = calculateTotalCurrent();
+                const profitLoss = totalCurrent - totalCost;
+
+                // Add to historical data
+                const today = new Date().toISOString().split('T')[0];
+                portfolioData.historicalData = portfolioData.historicalData || [];
+
+                // Remove today's entry if it exists
+                portfolioData.historicalData = portfolioData.historicalData.filter(d => d.date !== today);
+
+                // Add new entry
+                portfolioData.historicalData.push({
+                    date: today,
+                    profitLoss: profitLoss,
+                    totalValue: totalCurrent
+                });
+
+                // Save to localStorage
+                localStorage.setItem('portfolioData', JSON.stringify(portfolioData));
+
+                // Re-render charts
+                renderCharts();
+
+                showStatus('Prices updated successfully!');
+            } catch (error) {
+                console.error('Error fetching prices:', error);
+                showStatus('Error fetching prices: ' + error.message, true);
+            }
+        }
+
+        async function fetchStockPrice(symbol) {
+            try {
+                const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${portfolioData.apiKey}`;
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (data['Global Quote'] && data['Global Quote']['05. price']) {
+                    return parseFloat(data['Global Quote']['05. price']);
+                } else {
+                    console.error('No price data for', symbol, data);
+                    return null;
+                }
+            } catch (error) {
+                console.error('Error fetching price for', symbol, error);
+                return null;
+            }
+        }
+
+        function calculateTotalCost() {
+            let total = 0;
+            portfolioData.legs.forEach(leg => {
+                leg.holdings.forEach(holding => {
+                    if (!holding.isManual) {
+                        total += holding.shares * holding.costBasis;
+                    }
+                });
+            });
+            return total;
+        }
+
+        function calculateTotalCurrent() {
+            let total = 0;
+            portfolioData.legs.forEach(leg => {
+                leg.holdings.forEach(holding => {
+                    if (holding.isManual) {
+                        total += holding.manualValue || 0;
+                    } else {
+                        total += holding.currentValue || (holding.shares * holding.costBasis);
+                    }
+                });
+            });
+            return total;
+        }
+
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        function openDataModal() {
+            renderDataForm();
+            document.getElementById('dataModal').style.display = 'block';
+        }
+
+        function closeDataModal() {
+            document.getElementById('dataModal').style.display = 'none';
+        }
+
+        function renderDataForm() {
+            document.getElementById('apiKey').value = portfolioData.apiKey || '';
+
+            let html = '<h3>Holdings</h3><div class="holdings-grid">';
+
+            portfolioData.legs.forEach((leg, legIndex) => {
+                html += `<div><h3>${leg.name}</h3>`;
+
+                leg.holdings.forEach((holding, holdingIndex) => {
+                    const id = `${legIndex}_${holdingIndex}`;
+                    const displayName = holding.name || holding.symbol;
+
+                    html += `
+                        <div class="holding-card">
+                            <h4>${displayName}</h4>
+                            <div class="holding-inputs">
+                    `;
+
+                    if (holding.isManual) {
+                        html += `
+                            <div class="form-group">
+                                <label>Current Value ($):</label>
+                                <input type="number" step="0.01" id="manual_${id}"
+                                    value="${holding.manualValue || 0}">
+                            </div>
+                        `;
+                    } else {
+                        html += `
+                            <div class="form-group">
+                                <label>Shares:</label>
+                                <input type="number" step="0.0001" id="shares_${id}"
+                                    value="${holding.shares || 0}">
+                            </div>
+                            <div class="form-group">
+                                <label>Cost Basis ($):</label>
+                                <input type="number" step="0.01" id="cost_${id}"
+                                    value="${holding.costBasis || 0}">
+                            </div>
+                        `;
+                    }
+
+                    html += `
+                            </div>
+                        </div>
+                    `;
+                });
+
+                html += '</div>';
+            });
+
+            html += '</div>';
+            document.getElementById('holdingsForm').innerHTML = html;
+        }
+
+        function saveData() {
+            // Update API key
+            portfolioData.apiKey = document.getElementById('apiKey').value;
+
+            // Update holdings
+            portfolioData.legs.forEach((leg, legIndex) => {
+                leg.holdings.forEach((holding, holdingIndex) => {
+                    const id = `${legIndex}_${holdingIndex}`;
+
+                    if (holding.isManual) {
+                        const manualInput = document.getElementById(`manual_${id}`);
+                        if (manualInput) {
+                            holding.manualValue = parseFloat(manualInput.value) || 0;
+                        }
+                    } else {
+                        const sharesInput = document.getElementById(`shares_${id}`);
+                        const costInput = document.getElementById(`cost_${id}`);
+
+                        if (sharesInput) holding.shares = parseFloat(sharesInput.value) || 0;
+                        if (costInput) holding.costBasis = parseFloat(costInput.value) || 0;
+                    }
+                });
+            });
+
+            // Save to localStorage
+            localStorage.setItem('portfolioData', JSON.stringify(portfolioData));
+
+            showStatus('Data saved successfully!');
+            renderCharts();
+
+            setTimeout(() => {
+                closeDataModal();
+            }, 1500);
+        }
+
+        function exportData() {
+            const dataStr = JSON.stringify(portfolioData, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'portfolio-data.json';
+            link.click();
+            URL.revokeObjectURL(url);
+            showStatus('Data exported successfully!');
+        }
+
+        function importData() {
+            document.getElementById('fileInput').click();
+        }
+
+        function handleFileImport(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    portfolioData = JSON.parse(e.target.result);
+                    localStorage.setItem('portfolioData', JSON.stringify(portfolioData));
+                    showStatus('Data imported successfully!');
+                    renderCharts();
+                    renderDataForm();
+                } catch (error) {
+                    showStatus('Error importing data: ' + error.message, true);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function showStatus(message, isError = false) {
+            const statusDiv = document.getElementById('statusMessage');
+            statusDiv.className = isError ? 'status error' : 'status';
+            statusDiv.textContent = message;
+            statusDiv.style.display = 'block';
+
+            if (!isError) {
+                setTimeout(() => {
+                    statusDiv.style.display = 'none';
+                }, 3000);
+            }
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('dataModal');
+            if (event.target == modal) {
+                closeDataModal();
+            }
+        }
+    </script>
+</body>
+</html>
