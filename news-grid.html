@@ -43,7 +43,6 @@
       transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
       text-decoration: none;
       color: inherit;
-      overflow: hidden;
     }
 
     .card:hover {
@@ -60,7 +59,7 @@
       border-radius: 12px;
       opacity: 0;
       transition: opacity 0.2s;
-      z-index: 0;
+      z-index: 3;
     }
 
     .card:hover .card-warp {
@@ -107,7 +106,7 @@
       font-size: 13px;
       font-weight: 700;
       color: #e8e0f0;
-      z-index: 2;
+      z-index: 10;
       cursor: help;
     }
 
@@ -152,7 +151,7 @@
       pointer-events: none;
     }
 
-    .card > *:not(.card-image):not(.card-score) { position: relative; z-index: 1; }
+    .card > *:not(.card-image):not(.card-score):not(.card-warp) { position: relative; z-index: 1; }
 
     /* Overlay UI */
     #controls {
