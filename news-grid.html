@@ -24,6 +24,7 @@
       position: absolute;
       top: 0; left: 0;
       will-change: transform;
+      transform-origin: 0 0;
     }
 
     .card {
@@ -160,6 +161,16 @@
     }
 
     #loading.visible { display: block; }
+
+    #pastel-light {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.5;
+      transition: background 0.4s ease;
+    }
   </style>
 </head>
 <body>
@@ -183,6 +194,7 @@
   <div id="loading">Loading articles...</div>
   <div id="hint">Click &amp; drag or swipe to pan &middot; Click a card to read</div>
 
+  <div id="pastel-light"></div>
   <div id="viewport"></div>
 
   <script>
@@ -192,16 +204,39 @@
     const apiKeyInput = document.getElementById('apikey');
     const categoryBtns = document.querySelectorAll('#category-bar button');
 
+    const pastelLight = document.getElementById('pastel-light');
+
     let offsetX = 0, offsetY = 0;
+    let scale = 1;
     let isPanning = false;
     let startX, startY;
     let movedDistance = 0;
     let selectedCategory = 'general';
 
-    // ── Pan logic (mouse: right-click drag OR left-click drag) ──
+    const MIN_SCALE = 0.3;
+    const MAX_SCALE = 3;
+
+    // ── Transform ──
 
     function applyTransform() {
-      viewport.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
+      viewport.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`;
+      updatePastelLight();
+    }
+
+    // ── Dynamic pastel light ──
+
+    function updatePastelLight() {
+      // Derive hue from pan position so the color shifts as you move
+      const hue = ((offsetX * 0.15) + (offsetY * 0.1) + 360) % 360;
+      const hue2 = (hue + 60) % 360;
+      // Position the glow center opposite to pan direction (feels like a light source)
+      const cx = 50 - offsetX * 0.02;
+      const cy = 50 - offsetY * 0.02;
+      pastelLight.style.background =
+        `radial-gradient(ellipse 80% 80% at ${cx}% ${cy}%, ` +
+        `hsla(${hue}, 70%, 75%, 0.18), ` +
+        `hsla(${hue2}, 60%, 65%, 0.08) 50%, ` +
+        `transparent 80%)`;
     }
 
     // Prevent context menu so right-click drag works
@@ -232,25 +267,90 @@
       document.body.classList.remove('panning');
     });
 
-    // ── Touch pan ──
+    // ── Mouse wheel zoom ──
+
+    document.addEventListener('wheel', e => {
+      if (e.target.closest('#controls')) return;
+      e.preventDefault();
+      const zoomFactor = e.deltaY > 0 ? 0.92 : 1.08;
+      const newScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, scale * zoomFactor));
+
+      // Zoom toward cursor position
+      const rect = document.body.getBoundingClientRect();
+      const mx = e.clientX;
+      const my = e.clientY;
+      const ratio = newScale / scale;
+      offsetX = mx - ratio * (mx - offsetX);
+      offsetY = my - ratio * (my - offsetY);
+      scale = newScale;
+
+      applyTransform();
+    }, { passive: false });
+
+    // ── Touch pan + pinch-to-zoom ──
 
     let touchStartX, touchStartY;
+    let lastPinchDist = 0;
+    let pinching = false;
+
+    function getTouchDist(e) {
+      const [a, b] = [e.touches[0], e.touches[1]];
+      return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+    }
+
+    function getTouchCenter(e) {
+      const [a, b] = [e.touches[0], e.touches[1]];
+      return { x: (a.clientX + b.clientX) / 2, y: (a.clientY + b.clientY) / 2 };
+    }
+
     document.addEventListener('touchstart', e => {
       if (e.target.closest('#controls')) return;
-      const t = e.touches[0];
-      touchStartX = t.clientX - offsetX;
-      touchStartY = t.clientY - offsetY;
-      movedDistance = 0;
+      if (e.touches.length === 2) {
+        pinching = true;
+        lastPinchDist = getTouchDist(e);
+      } else if (e.touches.length === 1) {
+        pinching = false;
+        const t = e.touches[0];
+        touchStartX = t.clientX - offsetX;
+        touchStartY = t.clientY - offsetY;
+        movedDistance = 0;
+      }
     }, { passive: true });
 
     document.addEventListener('touchmove', e => {
-      const t = e.touches[0];
-      const dx = t.clientX - touchStartX - offsetX;
-      const dy = t.clientY - touchStartY - offsetY;
-      movedDistance += Math.abs(dx) + Math.abs(dy);
-      offsetX = t.clientX - touchStartX;
-      offsetY = t.clientY - touchStartY;
-      applyTransform();
+      if (e.target.closest('#controls')) return;
+
+      if (e.touches.length === 2 && pinching) {
+        e.preventDefault();
+        const dist = getTouchDist(e);
+        const center = getTouchCenter(e);
+        const zoomFactor = dist / lastPinchDist;
+        const newScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, scale * zoomFactor));
+        const ratio = newScale / scale;
+
+        offsetX = center.x - ratio * (center.x - offsetX);
+        offsetY = center.y - ratio * (center.y - offsetY);
+        scale = newScale;
+        lastPinchDist = dist;
+        applyTransform();
+      } else if (e.touches.length === 1 && !pinching) {
+        const t = e.touches[0];
+        const dx = t.clientX - touchStartX - offsetX;
+        const dy = t.clientY - touchStartY - offsetY;
+        movedDistance += Math.abs(dx) + Math.abs(dy);
+        offsetX = t.clientX - touchStartX;
+        offsetY = t.clientY - touchStartY;
+        applyTransform();
+      }
+    }, { passive: false });
+
+    document.addEventListener('touchend', e => {
+      if (e.touches.length < 2) pinching = false;
+      if (e.touches.length === 1) {
+        const t = e.touches[0];
+        touchStartX = t.clientX - offsetX;
+        touchStartY = t.clientY - offsetY;
+      }
     }, { passive: true });
 
     // ── Card click guard (don't navigate if user was panning) ──
@@ -297,6 +397,7 @@
     // ── Fetch & render ──
 
     // Load sample data on startup
+    updatePastelLight();
     renderGrid(sampleArticles);
 
     fetchBtn.addEventListener('click', loadArticles);
