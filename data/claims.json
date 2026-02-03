@@ -1,0 +1,27 @@
+{
+  "articles": {
+    "https://example.com/article/1": {
+      "title": "Global Markets Rally as Trade Tensions Ease Between Major Economies",
+      "source": "Reuters",
+      "analyzed_at": "2026-02-03T12:00:00Z",
+      "claims": [
+        {
+          "text": "Stock markets rose 2.3% following the announcement.",
+          "score": 9,
+          "reasoning": "Verifiable market data from official exchanges"
+        },
+        {
+          "text": "Trade officials described the talks as 'productive'.",
+          "score": 6,
+          "reasoning": "Direct quote but vague language"
+        },
+        {
+          "text": "Analysts expect continued growth through Q2.",
+          "score": 4,
+          "reasoning": "Unnamed analysts, speculative prediction"
+        }
+      ],
+      "avg_score": 6.3
+    }
+  }
+}
