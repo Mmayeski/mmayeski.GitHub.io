@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Submit Article Analysis</title>
+  <title>Add Article Analysis</title>
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -13,6 +13,8 @@
       color: #e0e0e0;
       min-height: 100vh;
       padding: 40px;
+      max-width: 900px;
+      margin: 0 auto;
     }
 
     h1 {
@@ -25,183 +27,168 @@
       margin-bottom: 32px;
     }
 
-    .form-group {
-      margin-bottom: 20px;
+    h2 {
+      font-size: 16px;
+      color: #aaa;
+      margin-top: 32px;
+      margin-bottom: 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      padding-bottom: 8px;
     }
 
-    label {
-      display: block;
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: #888;
-      margin-bottom: 8px;
-    }
-
-    input, textarea {
-      width: 100%;
-      max-width: 600px;
-      padding: 12px 16px;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      border-radius: 8px;
-      color: #e0e0e0;
-      font-size: 14px;
-      font-family: inherit;
-    }
-
-    textarea {
-      min-height: 300px;
-      font-family: 'Monaco', 'Consolas', monospace;
-      font-size: 13px;
-    }
-
-    input:focus, textarea:focus {
-      outline: none;
-      border-color: rgba(150, 150, 255, 0.5);
-    }
-
-    button {
-      padding: 12px 24px;
-      background: rgba(80, 80, 180, 0.5);
-      border: 1px solid rgba(150, 150, 255, 0.3);
-      border-radius: 8px;
-      color: #e0e0e0;
-      font-size: 14px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-
-    button:hover {
-      background: rgba(80, 80, 180, 0.7);
-    }
-
-    .template {
+    .step {
       background: rgba(255, 255, 255, 0.03);
       border: 1px solid rgba(255, 255, 255, 0.1);
       border-radius: 8px;
       padding: 20px;
-      margin-bottom: 32px;
-      max-width: 600px;
+      margin-bottom: 16px;
     }
 
-    .template h3 {
+    .step h3 {
       font-size: 14px;
+      color: #8888cc;
       margin-bottom: 12px;
-      color: #aaa;
     }
 
-    .template pre {
+    .step p {
+      font-size: 14px;
+      line-height: 1.6;
+      color: #bbb;
+      margin-bottom: 12px;
+    }
+
+    .step p:last-child {
+      margin-bottom: 0;
+    }
+
+    pre {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 6px;
+      padding: 16px;
       font-size: 12px;
       color: #8888cc;
-      white-space: pre-wrap;
+      overflow-x: auto;
       line-height: 1.5;
     }
 
-    #status {
-      margin-top: 16px;
-      padding: 12px 16px;
+    code {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+
+    .file-path {
+      display: inline-block;
+      background: rgba(80, 80, 180, 0.3);
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 13px;
+      margin: 8px 0;
+    }
+
+    a {
+      color: #aaaaff;
+    }
+
+    .prompt-template {
+      background: rgba(40, 35, 55, 0.5);
+      border: 1px solid rgba(150, 150, 255, 0.2);
       border-radius: 8px;
-      display: none;
+      padding: 20px;
+      margin-top: 12px;
     }
 
-    #status.success {
-      display: block;
-      background: rgba(80, 180, 80, 0.2);
-      border: 1px solid rgba(80, 180, 80, 0.4);
-      color: #8c8;
-    }
-
-    #status.error {
-      display: block;
-      background: rgba(180, 80, 80, 0.2);
-      border: 1px solid rgba(180, 80, 80, 0.4);
-      color: #c88;
+    .prompt-template h4 {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #888;
+      margin-bottom: 12px;
     }
   </style>
 </head>
 <body>
-  <h1>Submit Article Analysis</h1>
-  <p class="subtitle">Paste JSON output from your AI analysis to store claims data</p>
+  <h1>Add Article Analysis</h1>
+  <p class="subtitle">Manual workflow for adding claim analysis to articles</p>
 
-  <div class="template">
-    <h3>Expected JSON Format:</h3>
-    <pre>{
-  "article_url": "https://example.com/article",
-  "title": "Article Title",
-  "source": "Reuters",
+  <h2>How It Works</h2>
+
+  <div class="step">
+    <h3>1. Analyze an article with Claude</h3>
+    <p>Copy the article text and use the prompt template below. Claude will return a JSON object with claims and scores.</p>
+
+    <div class="prompt-template">
+      <h4>Prompt Template</h4>
+      <pre>Analyze this news article for source quality. For each major claim, rate it 1-10:
+
+1-2: Rumor, speculation, anonymous sources
+3-4: Single unnamed source, unverified claims
+5-6: Named sources, but not independently verified
+7-8: Multiple named sources, documented evidence
+9-10: Official records, court documents, public data
+
+Return JSON in this exact format:
+{
   "claims": [
     {
-      "text": "The claim text...",
-      "score": 8,
-      "reasoning": "Why this score..."
+      "text": "The specific claim from the article",
+      "score": 7,
+      "reasoning": "Brief explanation of the score"
     }
   ]
+}
+
+ARTICLE:
+[Paste article text here]</pre>
+    </div>
+  </div>
+
+  <div class="step">
+    <h3>2. Edit the claims data file</h3>
+    <p>Open this file in your repo:</p>
+    <div class="file-path">/data/claims.json</div>
+    <p>Add a new entry under "articles" with the article URL as the key:</p>
+    <pre>{
+  "articles": {
+    "https://example.com/your-article-url": {
+      "title": "Article Title",
+      "source": "Source Name",
+      "analyzed_at": "2026-02-03T12:00:00Z",
+      "claims": [
+        {
+          "text": "The specific claim",
+          "score": 7,
+          "reasoning": "Why this score"
+        }
+      ],
+      "avg_score": 7.0
+    }
+  }
 }</pre>
   </div>
 
-  <form id="submit-form">
-    <div class="form-group">
-      <label for="json-input">Claims JSON</label>
-      <textarea id="json-input" placeholder="Paste your JSON here..."></textarea>
-    </div>
-    <button type="submit">Submit to Database</button>
-  </form>
+  <div class="step">
+    <h3>3. Commit and push</h3>
+    <p>After editing <code>claims.json</code>, commit and push to deploy:</p>
+    <pre>git add data/claims.json
+git commit -m "Add analysis for [article name]"
+git push</pre>
+    <p>The article will show the real scores on the next deploy.</p>
+  </div>
 
-  <div id="status"></div>
+  <h2>Important Notes</h2>
 
-  <script>
-    const form = document.getElementById('submit-form');
-    const jsonInput = document.getElementById('json-input');
-    const status = document.getElementById('status');
+  <div class="step">
+    <p><strong>URL matching:</strong> The article URL in <code>claims.json</code> must exactly match the URL from your news source.</p>
+    <p><strong>Average score:</strong> Calculate it manually: sum of all scores / number of claims.</p>
+    <p><strong>Sample articles:</strong> The current demo uses placeholder URLs like <code>https://example.com/article/1</code>. When you connect a real news feed, use those URLs.</p>
+  </div>
 
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-
-      try {
-        // Validate JSON
-        const data = JSON.parse(jsonInput.value);
-
-        if (!data.article_url || !data.claims) {
-          throw new Error('Missing required fields: article_url and claims');
-        }
-
-        // Calculate average score
-        const scores = data.claims.map(c => c.score).filter(s => typeof s === 'number');
-        data.avg_score = scores.length > 0
-          ? (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1)
-          : null;
-        data.analyzed_at = new Date().toISOString();
-
-        // Submit to Vercel KV via API endpoint
-        const response = await fetch('/api/claims/submit', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
-        });
-
-        const result = await response.json();
-
-        if (!response.ok) {
-          throw new Error(result.error || 'Failed to submit');
-        }
-
-        status.className = 'success';
-        status.innerHTML = `
-          <strong>Saved successfully!</strong><br>
-          Article: ${result.article_url}<br>
-          Claims: ${result.claims_count}<br>
-          Average Score: ${result.avg_score}
-        `;
-
-        // Clear the form
-        jsonInput.value = '';
-      } catch (err) {
-        status.className = 'error';
-        status.textContent = 'Error: ' + err.message;
-      }
-    });
-  </script>
+  <p style="margin-top: 40px; color: #666; font-size: 13px;">
+    <a href="/">Back to News Grid</a>
+  </p>
 </body>
 </html>

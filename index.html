@@ -688,14 +688,48 @@
     const avgScoreCircle = document.querySelector('#expanded-avg-score .score-circle');
     const expandingCard = document.getElementById('expanding-card');
 
-    // Sample claims for demo
-    const sampleClaims = [
-      "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt.",
-      "Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip.",
-      "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat.",
-      "Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt.",
-      "Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque.",
+    // Claims data loaded from JSON file
+    let claimsData = null;
+
+    // Load claims data on startup
+    fetch('/data/claims.json')
+      .then(res => res.json())
+      .then(data => { claimsData = data; })
+      .catch(err => console.log('Claims data not loaded:', err));
+
+    // Fallback claims for articles without analysis
+    const fallbackClaims = [
+      { text: "This article has not yet been analyzed.", score: null, reasoning: "Pending review" }
     ];
+
+    function renderClaims(claims, avgScore) {
+      claimsList.innerHTML = '';
+
+      claims.forEach(claim => {
+        const claimItem = document.createElement('div');
+        claimItem.className = 'claim-item';
+
+        const scoreDiv = document.createElement('div');
+        scoreDiv.className = 'claim-score';
+        scoreDiv.textContent = claim.score !== null ? claim.score : '?';
+        if (claim.score === null) scoreDiv.style.opacity = '0.4';
+
+        const textDiv = document.createElement('div');
+        textDiv.className = 'claim-text';
+        textDiv.innerHTML = `
+          <div>${claim.text}</div>
+          ${claim.reasoning ? `<div style="margin-top:8px;font-size:12px;color:#888;font-style:italic;">${claim.reasoning}</div>` : ''}
+        `;
+
+        claimItem.appendChild(scoreDiv);
+        claimItem.appendChild(textDiv);
+        claimsList.appendChild(claimItem);
+      });
+
+      avgScoreCircle.textContent = avgScore !== null ? avgScore : '?';
+      if (avgScore === null) avgScoreCircle.style.opacity = '0.4';
+      else avgScoreCircle.style.opacity = '1';
+    }
 
     function openExpandedView(article, cardElement) {
       expandedSource.textContent = article.source?.name || '';
@@ -705,34 +739,14 @@
         : '';
       expandedLink.href = article.url || '#';
 
-      // Generate random claims with scores
-      claimsList.innerHTML = '';
-      const scores = [];
-      const numClaims = 3 + Math.floor(Math.random() * 4); // 3-6 claims
+      // Look up claims for this article
+      const articleData = claimsData?.articles?.[article.url];
 
-      for (let i = 0; i < numClaims; i++) {
-        const score = Math.floor(Math.random() * 10) + 1;
-        scores.push(score);
-
-        const claimItem = document.createElement('div');
-        claimItem.className = 'claim-item';
-
-        const scoreDiv = document.createElement('div');
-        scoreDiv.className = 'claim-score';
-        scoreDiv.textContent = score;
-
-        const textDiv = document.createElement('div');
-        textDiv.className = 'claim-text';
-        textDiv.textContent = sampleClaims[i % sampleClaims.length];
-
-        claimItem.appendChild(scoreDiv);
-        claimItem.appendChild(textDiv);
-        claimsList.appendChild(claimItem);
+      if (articleData && articleData.claims) {
+        renderClaims(articleData.claims, articleData.avg_score);
+      } else {
+        renderClaims(fallbackClaims, null);
       }
-
-      // Calculate and display average
-      const avg = (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1);
-      avgScoreCircle.textContent = avg;
 
       // Animate card expansion
       if (cardElement) {
@@ -966,14 +980,22 @@
         card.appendChild(date);
 
         // Source quality score badge
-        const score = document.createElement('div');
-        score.className = 'card-score';
-        score.textContent = Math.floor(Math.random() * 10) + 1;
+        const scoreEl = document.createElement('div');
+        scoreEl.className = 'card-score';
+        const articleClaims = claimsData?.articles?.[article.url];
+        if (articleClaims?.avg_score) {
+          scoreEl.textContent = articleClaims.avg_score;
+        } else {
+          scoreEl.textContent = '?';
+          scoreEl.style.opacity = '0.4';
+        }
         const tooltip = document.createElement('div');
         tooltip.className = 'card-score-tooltip';
-        tooltip.textContent = "This scale measures the article's overall quality of sourcing.";
-        score.appendChild(tooltip);
-        card.appendChild(score);
+        tooltip.textContent = articleClaims
+          ? "This scale measures the article's overall quality of sourcing."
+          : "This article has not been analyzed yet.";
+        scoreEl.appendChild(tooltip);
+        card.appendChild(scoreEl);
 
         viewport.appendChild(card);
       });
