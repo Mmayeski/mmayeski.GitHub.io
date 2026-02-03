@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>News Grid</title>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      overflow: hidden;
+      background: #0f0f1a;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      color: #e0e0e0;
+      height: 100vh;
+      width: 100vw;
+      cursor: grab;
+      user-select: none;
+    }
+
+    body.panning { cursor: grabbing; }
+
+    #viewport {
+      position: absolute;
+      top: 0; left: 0;
+      will-change: transform;
+    }
+
+    .card {
+      position: absolute;
+      width: 320px;
+      height: 220px;
+      background: rgba(255, 255, 255, 0.06);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .card:hover {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 255, 255, 0.25);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
+
+    .card-source {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #8888cc;
+      font-weight: 600;
+    }
+
+    .card-title {
+      font-size: 15px;
+      font-weight: 600;
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 4;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .card-date {
+      font-size: 11px;
+      color: #777;
+    }
+
+    .card-image {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 12px;
+      opacity: 0.15;
+      pointer-events: none;
+    }
+
+    .card > *:not(.card-image) { position: relative; z-index: 1; }
+
+    /* Overlay UI */
+    #controls {
+      position: fixed;
+      top: 16px; left: 16px;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    #api-bar {
+      display: flex;
+      gap: 8px;
+    }
+
+    #api-bar input {
+      width: 300px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.15);
+      background: rgba(0,0,0,0.5);
+      color: #e0e0e0;
+      font-size: 13px;
+      backdrop-filter: blur(8px);
+    }
+
+    #api-bar button, #category-bar button {
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.15);
+      background: rgba(80, 80, 180, 0.4);
+      color: #e0e0e0;
+      font-size: 13px;
+      cursor: pointer;
+      backdrop-filter: blur(8px);
+    }
+
+    #api-bar button:hover, #category-bar button:hover {
+      background: rgba(80, 80, 180, 0.6);
+    }
+
+    #category-bar {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    #category-bar button.active {
+      background: rgba(100, 100, 220, 0.7);
+      border-color: rgba(150, 150, 255, 0.5);
+    }
+
+    #hint {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 12px;
+      color: #555;
+      z-index: 100;
+      pointer-events: none;
+    }
+
+    #loading {
+      position: fixed;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 14px;
+      color: #666;
+      z-index: 100;
+      display: none;
+    }
+
+    #loading.visible { display: block; }
+  </style>
+</head>
+<body>
+
+  <div id="controls">
+    <div id="api-bar">
+      <input id="apikey" type="password" placeholder="Enter NewsAPI key (newsapi.org)" />
+      <button id="fetch-btn">Load News</button>
+    </div>
+    <div id="category-bar">
+      <button data-cat="general" class="active">General</button>
+      <button data-cat="technology">Tech</button>
+      <button data-cat="science">Science</button>
+      <button data-cat="business">Business</button>
+      <button data-cat="health">Health</button>
+      <button data-cat="sports">Sports</button>
+      <button data-cat="entertainment">Entertainment</button>
+    </div>
+  </div>
+
+  <div id="loading">Loading articles...</div>
+  <div id="hint">Click &amp; drag or swipe to pan &middot; Click a card to read</div>
+
+  <div id="viewport"></div>
+
+  <script>
+    const viewport = document.getElementById('viewport');
+    const loading = document.getElementById('loading');
+    const fetchBtn = document.getElementById('fetch-btn');
+    const apiKeyInput = document.getElementById('apikey');
+    const categoryBtns = document.querySelectorAll('#category-bar button');
+
+    let offsetX = 0, offsetY = 0;
+    let isPanning = false;
+    let startX, startY;
+    let movedDistance = 0;
+    let selectedCategory = 'general';
+
+    // ── Pan logic (mouse: right-click drag OR left-click drag) ──
+
+    function applyTransform() {
+      viewport.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
+    }
+
+    // Prevent context menu so right-click drag works
+    document.addEventListener('contextmenu', e => e.preventDefault());
+
+    document.addEventListener('mousedown', e => {
+      // Allow clicks on input/button
+      if (e.target.closest('#controls')) return;
+      isPanning = true;
+      startX = e.clientX - offsetX;
+      startY = e.clientY - offsetY;
+      movedDistance = 0;
+      document.body.classList.add('panning');
+    });
+
+    document.addEventListener('mousemove', e => {
+      if (!isPanning) return;
+      const dx = e.clientX - startX - offsetX;
+      const dy = e.clientY - startY - offsetY;
+      movedDistance += Math.abs(dx) + Math.abs(dy);
+      offsetX = e.clientX - startX;
+      offsetY = e.clientY - startY;
+      applyTransform();
+    });
+
+    document.addEventListener('mouseup', () => {
+      isPanning = false;
+      document.body.classList.remove('panning');
+    });
+
+    // ── Touch pan ──
+
+    let touchStartX, touchStartY;
+    document.addEventListener('touchstart', e => {
+      if (e.target.closest('#controls')) return;
+      const t = e.touches[0];
+      touchStartX = t.clientX - offsetX;
+      touchStartY = t.clientY - offsetY;
+      movedDistance = 0;
+    }, { passive: true });
+
+    document.addEventListener('touchmove', e => {
+      const t = e.touches[0];
+      const dx = t.clientX - touchStartX - offsetX;
+      const dy = t.clientY - touchStartY - offsetY;
+      movedDistance += Math.abs(dx) + Math.abs(dy);
+      offsetX = t.clientX - touchStartX;
+      offsetY = t.clientY - touchStartY;
+      applyTransform();
+    }, { passive: true });
+
+    // ── Card click guard (don't navigate if user was panning) ──
+
+    viewport.addEventListener('click', e => {
+      const card = e.target.closest('.card');
+      if (!card) return;
+      if (movedDistance > 8) {
+        e.preventDefault();
+      }
+    }, true);
+
+    // ── Category buttons ──
+
+    categoryBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        categoryBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        selectedCategory = btn.dataset.cat;
+      });
+    });
+
+    // ── Fetch & render ──
+
+    fetchBtn.addEventListener('click', loadArticles);
+    apiKeyInput.addEventListener('keydown', e => { if (e.key === 'Enter') loadArticles(); });
+
+    async function loadArticles() {
+      const key = apiKeyInput.value.trim();
+      if (!key) { alert('Please enter a NewsAPI key.'); return; }
+
+      loading.classList.add('visible');
+      viewport.innerHTML = '';
+
+      try {
+        const res = await fetch(
+          `https://newsapi.org/v2/top-headlines?country=us&category=${selectedCategory}&pageSize=60&apiKey=${key}`
+        );
+        const data = await res.json();
+
+        if (data.status !== 'ok') {
+          alert('API error: ' + (data.message || 'Unknown error'));
+          loading.classList.remove('visible');
+          return;
+        }
+
+        const articles = data.articles.filter(a => a.title && a.title !== '[Removed]');
+        renderGrid(articles);
+      } catch (err) {
+        alert('Network error: ' + err.message);
+      }
+
+      loading.classList.remove('visible');
+    }
+
+    function renderGrid(articles) {
+      const cols = Math.ceil(Math.sqrt(articles.length));
+      const cardW = 340;
+      const cardH = 240;
+      const gap = 20;
+
+      // Center grid around viewport center
+      const totalW = cols * (cardW + gap);
+      const totalH = Math.ceil(articles.length / cols) * (cardH + gap);
+      const baseX = (window.innerWidth - totalW) / 2;
+      const baseY = (window.innerHeight - totalH) / 2;
+
+      // Reset pan to center
+      offsetX = 0;
+      offsetY = 0;
+      applyTransform();
+
+      articles.forEach((article, i) => {
+        const col = i % cols;
+        const row = Math.floor(i / cols);
+
+        const card = document.createElement('a');
+        card.className = 'card';
+        card.href = article.url;
+        card.target = '_blank';
+        card.rel = 'noopener noreferrer';
+        card.style.left = `${baseX + col * (cardW + gap)}px`;
+        card.style.top = `${baseY + row * (cardH + gap)}px`;
+
+        if (article.urlToImage) {
+          const img = document.createElement('img');
+          img.className = 'card-image';
+          img.src = article.urlToImage;
+          img.alt = '';
+          img.loading = 'lazy';
+          card.appendChild(img);
+        }
+
+        const source = document.createElement('div');
+        source.className = 'card-source';
+        source.textContent = article.source?.name || '';
+        card.appendChild(source);
+
+        const title = document.createElement('div');
+        title.className = 'card-title';
+        title.textContent = article.title;
+        card.appendChild(title);
+
+        const date = document.createElement('div');
+        date.className = 'card-date';
+        date.textContent = article.publishedAt
+          ? new Date(article.publishedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+          : '';
+        card.appendChild(date);
+
+        viewport.appendChild(card);
+      });
+    }
+  </script>
+</body>
+</html>
