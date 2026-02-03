@@ -237,6 +237,215 @@
       opacity: 0.5;
       transition: background 0.4s ease;
     }
+
+    /* Expanded article view */
+    #expanded-overlay {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(10, 10, 20, 0.95);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      z-index: 200;
+      display: none;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    #expanded-overlay.visible {
+      display: flex;
+      opacity: 1;
+    }
+
+    #expanded-content {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      padding: 40px;
+      gap: 40px;
+      overflow: hidden;
+    }
+
+    #expanded-close {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #e0e0e0;
+      font-size: 24px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+    }
+
+    #expanded-close:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    #expanded-left {
+      flex: 0 0 320px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    #expanded-thumbnail {
+      width: 100%;
+      aspect-ratio: 16/9;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #555;
+      font-size: 13px;
+    }
+
+    #expanded-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    #expanded-source {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #8888cc;
+      font-weight: 600;
+    }
+
+    #expanded-title {
+      font-size: 20px;
+      font-weight: 600;
+      line-height: 1.4;
+      color: #e0e0e0;
+    }
+
+    #expanded-date {
+      font-size: 12px;
+      color: #666;
+    }
+
+    #expanded-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px 24px;
+      background: rgba(80, 80, 180, 0.5);
+      border: 1px solid rgba(150, 150, 255, 0.3);
+      border-radius: 8px;
+      color: #e0e0e0;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+      margin-top: auto;
+    }
+
+    #expanded-link:hover {
+      background: rgba(80, 80, 180, 0.7);
+    }
+
+    #expanded-right {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    #expanded-right h3 {
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #888;
+      margin-bottom: 16px;
+      font-weight: 600;
+    }
+
+    #claims-list {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding-right: 10px;
+    }
+
+    .claim-item {
+      display: flex;
+      gap: 16px;
+      padding: 16px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 10px;
+    }
+
+    .claim-score {
+      flex: 0 0 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: rgba(180, 160, 220, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      font-weight: 700;
+      color: #e8e0f0;
+    }
+
+    .claim-text {
+      flex: 1;
+      font-size: 14px;
+      line-height: 1.5;
+      color: #ccc;
+    }
+
+    #expanded-avg-score {
+      margin-top: 20px;
+      padding: 16px;
+      background: rgba(180, 160, 220, 0.15);
+      border: 1px solid rgba(180, 160, 220, 0.3);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    #expanded-avg-score .score-circle {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: rgba(180, 160, 220, 0.4);
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      font-weight: 700;
+      color: #e8e0f0;
+    }
+
+    #expanded-avg-score .score-label {
+      font-size: 13px;
+      color: #aaa;
+    }
+
+    #expanded-avg-score .score-label strong {
+      display: block;
+      font-size: 16px;
+      color: #e0e0e0;
+      margin-top: 4px;
+    }
   </style>
 </head>
 <body>
@@ -262,6 +471,33 @@
 
   <div id="pastel-light"></div>
   <div id="viewport"></div>
+
+  <!-- Expanded article overlay -->
+  <div id="expanded-overlay">
+    <button id="expanded-close">&times;</button>
+    <div id="expanded-content">
+      <div id="expanded-left">
+        <div id="expanded-thumbnail">Thumbnail</div>
+        <div id="expanded-meta">
+          <div id="expanded-source"></div>
+          <div id="expanded-title"></div>
+          <div id="expanded-date"></div>
+        </div>
+        <a id="expanded-link" target="_blank" rel="noopener noreferrer">Visit Article</a>
+      </div>
+      <div id="expanded-right">
+        <h3>Source Claims Analysis</h3>
+        <div id="claims-list"></div>
+        <div id="expanded-avg-score">
+          <div class="score-circle"></div>
+          <div class="score-label">
+            Average Score
+            <strong>Overall Source Quality</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <script>
     const viewport = document.getElementById('viewport');
@@ -419,15 +655,93 @@
       }
     }, { passive: true });
 
-    // ── Card click guard (don't navigate if user was panning) ──
+    // ── Expanded view ──
 
+    const expandedOverlay = document.getElementById('expanded-overlay');
+    const expandedClose = document.getElementById('expanded-close');
+    const expandedSource = document.getElementById('expanded-source');
+    const expandedTitle = document.getElementById('expanded-title');
+    const expandedDate = document.getElementById('expanded-date');
+    const expandedLink = document.getElementById('expanded-link');
+    const claimsList = document.getElementById('claims-list');
+    const avgScoreCircle = document.querySelector('#expanded-avg-score .score-circle');
+
+    // Sample claims for demo
+    const sampleClaims = [
+      "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt.",
+      "Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip.",
+      "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat.",
+      "Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt.",
+      "Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque.",
+    ];
+
+    function openExpandedView(article) {
+      expandedSource.textContent = article.source?.name || '';
+      expandedTitle.textContent = article.title || '';
+      expandedDate.textContent = article.publishedAt
+        ? new Date(article.publishedAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+        : '';
+      expandedLink.href = article.url || '#';
+
+      // Generate random claims with scores
+      claimsList.innerHTML = '';
+      const scores = [];
+      const numClaims = 3 + Math.floor(Math.random() * 4); // 3-6 claims
+
+      for (let i = 0; i < numClaims; i++) {
+        const score = Math.floor(Math.random() * 10) + 1;
+        scores.push(score);
+
+        const claimItem = document.createElement('div');
+        claimItem.className = 'claim-item';
+
+        const scoreDiv = document.createElement('div');
+        scoreDiv.className = 'claim-score';
+        scoreDiv.textContent = score;
+
+        const textDiv = document.createElement('div');
+        textDiv.className = 'claim-text';
+        textDiv.textContent = sampleClaims[i % sampleClaims.length];
+
+        claimItem.appendChild(scoreDiv);
+        claimItem.appendChild(textDiv);
+        claimsList.appendChild(claimItem);
+      }
+
+      // Calculate and display average
+      const avg = (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1);
+      avgScoreCircle.textContent = avg;
+
+      expandedOverlay.style.display = 'flex';
+      requestAnimationFrame(() => expandedOverlay.classList.add('visible'));
+    }
+
+    function closeExpandedView() {
+      expandedOverlay.classList.remove('visible');
+      setTimeout(() => { expandedOverlay.style.display = 'none'; }, 300);
+    }
+
+    expandedClose.addEventListener('click', closeExpandedView);
+    expandedOverlay.addEventListener('click', e => {
+      if (e.target === expandedOverlay) closeExpandedView();
+    });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && expandedOverlay.classList.contains('visible')) {
+        closeExpandedView();
+      }
+    });
+
+    // Card click handler
     viewport.addEventListener('click', e => {
       const card = e.target.closest('.card');
       if (!card) return;
-      if (movedDistance > 8) {
-        e.preventDefault();
-      }
-    }, true);
+      // Ignore if user was panning or clicked on score badge
+      if (movedDistance > 8) return;
+      if (e.target.closest('.card-score')) return;
+
+      const article = card._articleData;
+      if (article) openExpandedView(article);
+    });
 
     // ── Card warp effect ──
 
@@ -553,13 +867,12 @@
         const col = i % cols;
         const row = Math.floor(i / cols);
 
-        const card = document.createElement('a');
+        const card = document.createElement('div');
         card.className = 'card';
-        card.href = article.url;
-        card.target = '_blank';
-        card.rel = 'noopener noreferrer';
         card.style.left = `${baseX + col * (cardW + gap)}px`;
         card.style.top = `${baseY + row * (cardH + gap)}px`;
+        card.style.cursor = 'pointer';
+        card._articleData = article;
 
         // Warp effect layer
         const warp = document.createElement('div');
