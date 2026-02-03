@@ -1,8 +1,7 @@
-// API endpoint to fetch claims for an article
-// Later: Connect to Vercel KV to retrieve stored claims
+import { kv } from '@vercel/kv';
 
+// GET /api/claims?url=... - Fetch claims for an article
 export default async function handler(req, res) {
-  // Enable CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -11,28 +10,27 @@ export default async function handler(req, res) {
     return res.status(200).end();
   }
 
+  if (req.method !== 'GET') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
   const { url } = req.query;
 
   if (!url) {
     return res.status(400).json({ error: 'Missing url parameter' });
   }
 
-  // TODO: Replace with Vercel KV lookup
-  // const claims = await kv.get(`claims:${url}`);
+  try {
+    // Look up claims by article URL
+    const claims = await kv.get(`claims:${url}`);
 
-  // For now, return placeholder data
-  const mockClaims = {
-    article_url: url,
-    analyzed_at: new Date().toISOString(),
-    claims: [
-      {
-        text: "This is a placeholder claim. Connect Vercel KV to see real data.",
-        score: 7,
-        reasoning: "Placeholder reasoning"
-      }
-    ],
-    avg_score: 7
-  };
+    if (!claims) {
+      return res.status(404).json({ error: 'No analysis found for this article' });
+    }
 
-  return res.status(200).json(mockClaims);
+    return res.status(200).json(claims);
+  } catch (err) {
+    console.error('KV error:', err);
+    return res.status(500).json({ error: 'Database error' });
+  }
 }

@@ -174,24 +174,29 @@
           : null;
         data.analyzed_at = new Date().toISOString();
 
-        // TODO: Submit to Vercel KV via API endpoint
-        // const res = await fetch('/api/claims/submit', {
-        //   method: 'POST',
-        //   headers: { 'Content-Type': 'application/json' },
-        //   body: JSON.stringify(data)
-        // });
+        // Submit to Vercel KV via API endpoint
+        const response = await fetch('/api/claims/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
 
-        // For now, just show success with the processed data
-        console.log('Would submit:', data);
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.error || 'Failed to submit');
+        }
 
         status.className = 'success';
         status.innerHTML = `
-          <strong>Valid JSON!</strong><br>
-          Article: ${data.article_url}<br>
-          Claims: ${data.claims.length}<br>
-          Average Score: ${data.avg_score}<br><br>
-          <em>Note: Vercel KV not yet connected. Data logged to console.</em>
+          <strong>Saved successfully!</strong><br>
+          Article: ${result.article_url}<br>
+          Claims: ${result.claims_count}<br>
+          Average Score: ${result.avg_score}
         `;
+
+        // Clear the form
+        jsonInput.value = '';
       } catch (err) {
         status.className = 'error';
         status.textContent = 'Error: ' + err.message;
