@@ -40,9 +40,10 @@
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+      transition: background 0.2s, border-color 0.2s, box-shadow 0.2s, transform 0.15s ease-out;
       text-decoration: none;
       color: inherit;
+      transform: perspective(600px) rotateX(0deg) rotateY(0deg);
     }
 
     .card:hover {
@@ -362,6 +363,59 @@
         e.preventDefault();
       }
     }, true);
+
+    // ── 3D card tilt ──
+
+    const TILT_MAX = 8; // degrees
+
+    function applyTilt(card, clientX, clientY) {
+      const rect = card.getBoundingClientRect();
+      const x = (clientX - rect.left) / rect.width;   // 0..1
+      const y = (clientY - rect.top) / rect.height;    // 0..1
+      const rotY = (x - 0.5) * TILT_MAX * 2;           // left/right
+      const rotX = (0.5 - y) * TILT_MAX * 2;           // up/down
+      card.style.transform = `perspective(600px) rotateX(${rotX}deg) rotateY(${rotY}deg)`;
+    }
+
+    function resetTilt(card) {
+      card.style.transform = 'perspective(600px) rotateX(0deg) rotateY(0deg)';
+    }
+
+    // Mouse tilt
+    viewport.addEventListener('mousemove', e => {
+      const card = e.target.closest('.card');
+      if (!card) return;
+      if (isPanning) return;
+      applyTilt(card, e.clientX, e.clientY);
+    });
+
+    viewport.addEventListener('mouseleave', e => {
+      const card = e.target.closest('.card');
+      if (card) resetTilt(card);
+    }, true);
+
+    // Reset when mouse leaves a card (via event delegation)
+    viewport.addEventListener('mouseout', e => {
+      const card = e.target.closest('.card');
+      if (card && !card.contains(e.relatedTarget)) resetTilt(card);
+    });
+
+    // Touch tilt — single finger held on a card
+    let tiltCard = null;
+    document.addEventListener('touchstart', e => {
+      if (e.touches.length !== 1) return;
+      const card = e.target.closest('.card');
+      if (card) tiltCard = card;
+    }, { passive: true });
+
+    document.addEventListener('touchmove', e => {
+      if (!tiltCard || pinching || e.touches.length !== 1) return;
+      applyTilt(tiltCard, e.touches[0].clientX, e.touches[0].clientY);
+    }, { passive: true });
+
+    document.addEventListener('touchend', () => {
+      if (tiltCard) { resetTilt(tiltCard); tiltCard = null; }
+    }, { passive: true });
 
     // ── Category buttons ──
 
