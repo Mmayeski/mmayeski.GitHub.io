@@ -1,885 +1,923 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Portfolio Tracker</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>News Grid</title>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-            color: #333;
-        }
+    body {
+      overflow: hidden;
+      background: #0f0f1a;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      color: #e0e0e0;
+      height: 100vh;
+      width: 100vw;
+      cursor: grab;
+      user-select: none;
+    }
 
-        .container {
-            max-width: 1600px;
-            margin: 0 auto;
-        }
+    body.panning { cursor: grabbing; }
 
-        header {
-            background: white;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            margin-bottom: 30px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
+    #viewport {
+      position: absolute;
+      top: 0; left: 0;
+      will-change: transform;
+      transform-origin: 0 0;
+    }
 
-        h1 {
-            font-size: 2.5rem;
-            font-weight: 300;
-            color: #333;
-        }
+    .card {
+      position: absolute;
+      width: 320px;
+      height: 220px;
+      background: rgba(255, 255, 255, 0.06);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+      text-decoration: none;
+      color: inherit;
+    }
 
-        .controls {
-            display: flex;
-            gap: 10px;
-        }
+    .card:hover {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 255, 255, 0.25);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
 
-        button {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 500;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
+    .card-warp {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+      border-radius: 12px;
+      opacity: 0;
+      transition: opacity 0.2s;
+      z-index: 3;
+    }
 
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-        }
+    .card:hover .card-warp {
+      opacity: 1;
+    }
 
-        button:active {
-            transform: translateY(0);
-        }
+    .card-source {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #8888cc;
+      font-weight: 600;
+    }
 
-        .heatmaps {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 30px;
-            margin-bottom: 30px;
-        }
+    .card-title {
+      font-size: 15px;
+      font-weight: 600;
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 4;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
 
-        .chart-container {
-            background: white;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
+    .card-date {
+      font-size: 11px;
+      color: #777;
+    }
 
-        .chart-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
+    .card-score {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: rgba(180, 160, 220, 0.4);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+      color: #e8e0f0;
+      z-index: 10;
+      cursor: help;
+    }
 
-        .chart-title {
-            font-size: 1.5rem;
-            font-weight: 400;
-            color: #333;
-        }
+    .card-score:hover {
+      background: rgba(180, 160, 220, 0.6);
+    }
 
-        .chart-subtitle {
-            font-size: 0.9rem;
-            color: #666;
-            margin-top: 5px;
-        }
+    .card-score-tooltip {
+      position: absolute;
+      bottom: calc(100% + 8px);
+      right: 0;
+      width: 180px;
+      padding: 8px 10px;
+      background: rgba(40, 35, 55, 0.95);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 400;
+      line-height: 1.4;
+      color: #ccc;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.2s, visibility 0.2s;
+      pointer-events: none;
+    }
 
-        canvas {
-            max-height: 500px;
-        }
+    .card-score:hover .card-score-tooltip {
+      opacity: 1;
+      visibility: visible;
+    }
 
-        .performance-chart {
-            background: white;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            margin-bottom: 30px;
-        }
+    .card-image {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 12px;
+      opacity: 0.15;
+      pointer-events: none;
+    }
 
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            backdrop-filter: blur(5px);
-        }
+    .card > *:not(.card-image):not(.card-score):not(.card-warp) { position: relative; z-index: 1; }
 
-        .modal-content {
-            background: white;
-            margin: 50px auto;
-            padding: 40px;
-            border-radius: 12px;
-            max-width: 800px;
-            max-height: 80vh;
-            overflow-y: auto;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-        }
+    /* Overlay UI */
+    #controls {
+      position: fixed;
+      top: 16px; left: 16px;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
 
-        .close {
-            color: #aaa;
-            float: right;
-            font-size: 28px;
-            font-weight: bold;
-            cursor: pointer;
-            line-height: 20px;
-        }
+    #api-bar {
+      display: flex;
+      gap: 8px;
+    }
 
-        .close:hover {
-            color: #000;
-        }
+    #api-bar input {
+      width: 300px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.15);
+      background: rgba(0,0,0,0.5);
+      color: #e0e0e0;
+      font-size: 13px;
+      backdrop-filter: blur(8px);
+    }
 
-        .form-group {
-            margin-bottom: 20px;
-        }
+    #api-bar button, #category-bar button {
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.15);
+      background: rgba(80, 80, 180, 0.4);
+      color: #e0e0e0;
+      font-size: 13px;
+      cursor: pointer;
+      backdrop-filter: blur(8px);
+    }
 
-        label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 500;
-            color: #333;
-        }
+    #api-bar button:hover, #category-bar button:hover {
+      background: rgba(80, 80, 180, 0.6);
+    }
 
-        input[type="text"],
-        input[type="number"] {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 14px;
-            transition: border-color 0.3s;
-        }
+    #category-bar {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
 
-        input:focus {
-            outline: none;
-            border-color: #667eea;
-        }
+    #category-bar button.active {
+      background: rgba(100, 100, 220, 0.7);
+      border-color: rgba(150, 150, 255, 0.5);
+    }
 
-        .holdings-grid {
-            display: grid;
-            gap: 20px;
-            margin-top: 20px;
-        }
+    #hint {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 12px;
+      color: #555;
+      z-index: 100;
+      pointer-events: none;
+    }
 
-        .holding-card {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 8px;
-            border-left: 4px solid #667eea;
-        }
+    #loading {
+      position: fixed;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 14px;
+      color: #666;
+      z-index: 100;
+      display: none;
+    }
 
-        .holding-card h4 {
-            margin-bottom: 15px;
-            color: #333;
-        }
+    #loading.visible { display: block; }
 
-        .holding-inputs {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-        }
+    #pastel-light {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.5;
+      transition: background 0.4s ease;
+    }
 
-        .status {
-            background: #e8f5e9;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            border-left: 4px solid #4caf50;
-        }
+    /* Expanded article view */
+    #expanded-overlay {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(10, 10, 20, 0.95);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      z-index: 200;
+      display: none;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
 
-        .error {
-            background: #ffebee;
-            border-left-color: #f44336;
-        }
+    #expanded-overlay.visible {
+      display: flex;
+      opacity: 1;
+    }
 
-        .loading {
-            text-align: center;
-            padding: 20px;
-            color: #666;
-        }
+    #expanded-content {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      padding: 40px;
+      gap: 40px;
+      overflow: hidden;
+    }
 
-        @media (max-width: 1024px) {
-            .heatmaps {
-                grid-template-columns: 1fr;
-            }
-        }
+    #expanded-close {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #e0e0e0;
+      font-size: 24px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+    }
 
-        .legend-container {
-            margin-top: 20px;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 8px;
-        }
+    #expanded-close:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
 
-        .legend-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 8px 0;
-            border-bottom: 1px solid #e0e0e0;
-        }
+    #expanded-left {
+      flex: 0 0 320px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
 
-        .legend-item:last-child {
-            border-bottom: none;
-        }
+    #expanded-thumbnail {
+      width: 100%;
+      aspect-ratio: 16/9;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #555;
+      font-size: 13px;
+    }
 
-        .legend-label {
-            font-weight: 500;
-        }
+    #expanded-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
 
-        .legend-value {
-            color: #666;
-        }
-    </style>
+    #expanded-source {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #8888cc;
+      font-weight: 600;
+    }
+
+    #expanded-title {
+      font-size: 20px;
+      font-weight: 600;
+      line-height: 1.4;
+      color: #e0e0e0;
+    }
+
+    #expanded-date {
+      font-size: 12px;
+      color: #666;
+    }
+
+    #expanded-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px 24px;
+      background: rgba(80, 80, 180, 0.5);
+      border: 1px solid rgba(150, 150, 255, 0.3);
+      border-radius: 8px;
+      color: #e0e0e0;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+      margin-top: auto;
+    }
+
+    #expanded-link:hover {
+      background: rgba(80, 80, 180, 0.7);
+    }
+
+    #expanded-right {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    #expanded-right h3 {
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #888;
+      margin-bottom: 16px;
+      font-weight: 600;
+    }
+
+    #claims-list {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding-right: 10px;
+    }
+
+    .claim-item {
+      display: flex;
+      gap: 16px;
+      padding: 16px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 10px;
+    }
+
+    .claim-score {
+      flex: 0 0 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: rgba(180, 160, 220, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      font-weight: 700;
+      color: #e8e0f0;
+    }
+
+    .claim-text {
+      flex: 1;
+      font-size: 14px;
+      line-height: 1.5;
+      color: #ccc;
+    }
+
+    #expanded-avg-score {
+      margin-top: 20px;
+      padding: 16px;
+      background: rgba(180, 160, 220, 0.15);
+      border: 1px solid rgba(180, 160, 220, 0.3);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    #expanded-avg-score .score-circle {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: rgba(180, 160, 220, 0.4);
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      font-weight: 700;
+      color: #e8e0f0;
+    }
+
+    #expanded-avg-score .score-label {
+      font-size: 13px;
+      color: #aaa;
+    }
+
+    #expanded-avg-score .score-label strong {
+      display: block;
+      font-size: 16px;
+      color: #e0e0e0;
+      margin-top: 4px;
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>Portfolio Tracker</h1>
-            <div class="controls">
-                <button onclick="openDataModal()">Manage Data</button>
-                <button onclick="refreshPrices()">Refresh Prices</button>
-            </div>
-        </header>
 
-        <div class="heatmaps">
-            <div class="chart-container">
-                <div class="chart-header">
-                    <div>
-                        <div class="chart-title">Target Allocation</div>
-                        <div class="chart-subtitle">Your portfolio goals</div>
-                    </div>
-                </div>
-                <canvas id="targetChart"></canvas>
-                <div id="targetLegend" class="legend-container"></div>
-            </div>
-
-            <div class="chart-container">
-                <div class="chart-header">
-                    <div>
-                        <div class="chart-title">Current Allocation</div>
-                        <div class="chart-subtitle">Based on latest prices</div>
-                    </div>
-                </div>
-                <canvas id="currentChart"></canvas>
-                <div id="currentLegend" class="legend-container"></div>
-            </div>
-        </div>
-
-        <div class="performance-chart">
-            <div class="chart-header">
-                <div>
-                    <div class="chart-title">Portfolio Performance</div>
-                    <div class="chart-subtitle">Profit/Loss since inception</div>
-                </div>
-            </div>
-            <canvas id="performanceChart"></canvas>
-        </div>
+  <div id="controls">
+    <div id="api-bar">
+      <input id="apikey" type="password" placeholder="Enter NewsAPI key (newsapi.org)" />
+      <button id="fetch-btn">Load News</button>
     </div>
-
-    <!-- Data Management Modal -->
-    <div id="dataModal" class="modal">
-        <div class="modal-content">
-            <span class="close" onclick="closeDataModal()">&times;</span>
-            <h2>Manage Portfolio Data</h2>
-            <div id="statusMessage"></div>
-
-            <div class="form-group">
-                <label for="apiKey">Alpha Vantage API Key:</label>
-                <input type="text" id="apiKey" placeholder="Enter your API key">
-            </div>
-
-            <div id="holdingsForm"></div>
-
-            <div style="margin-top: 30px; display: flex; gap: 10px;">
-                <button onclick="saveData()">Save Data</button>
-                <button onclick="exportData()">Export JSON</button>
-                <button onclick="importData()">Import JSON</button>
-            </div>
-            <input type="file" id="fileInput" style="display: none;" accept=".json" onchange="handleFileImport(event)">
-        </div>
+    <div id="category-bar">
+      <button data-cat="general" class="active">General</button>
+      <button data-cat="technology">Tech</button>
+      <button data-cat="science">Science</button>
+      <button data-cat="business">Business</button>
+      <button data-cat="health">Health</button>
+      <button data-cat="sports">Sports</button>
+      <button data-cat="entertainment">Entertainment</button>
     </div>
+  </div>
 
-    <script>
-        let portfolioData = null;
-        let targetChart = null;
-        let currentChart = null;
-        let performanceChart = null;
+  <div id="loading">Loading articles...</div>
+  <div id="hint">Click &amp; drag or swipe to pan &middot; Click a card to read</div>
 
-        // Color palette for charts
-        const colors = [
-            '#667eea', '#764ba2', '#f093fb', '#4facfe',
-            '#43e97b', '#fa709a', '#feca57', '#48dbfb',
-            '#ff6b6b', '#ee5a6f', '#c44569', '#6c5ce7'
-        ];
+  <div id="pastel-light"></div>
+  <div id="viewport"></div>
 
-        // Initialize on page load
-        window.addEventListener('load', async () => {
-            await loadData();
-            renderCharts();
-        });
+  <!-- Expanded article overlay -->
+  <div id="expanded-overlay">
+    <button id="expanded-close">&times;</button>
+    <div id="expanded-content">
+      <div id="expanded-left">
+        <div id="expanded-thumbnail">Thumbnail</div>
+        <div id="expanded-meta">
+          <div id="expanded-source"></div>
+          <div id="expanded-title"></div>
+          <div id="expanded-date"></div>
+        </div>
+        <a id="expanded-link" target="_blank" rel="noopener noreferrer">Visit Article</a>
+      </div>
+      <div id="expanded-right">
+        <h3>Source Claims Analysis</h3>
+        <div id="claims-list"></div>
+        <div id="expanded-avg-score">
+          <div class="score-circle"></div>
+          <div class="score-label">
+            Average Score
+            <strong>Overall Source Quality</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
-        async function loadData() {
-            try {
-                // Always load from JSON file first to get latest structure
-                const response = await fetch('portfolio-data.json');
-                const jsonData = await response.json();
+  <script>
+    const viewport = document.getElementById('viewport');
+    const loading = document.getElementById('loading');
+    const fetchBtn = document.getElementById('fetch-btn');
+    const apiKeyInput = document.getElementById('apikey');
+    const categoryBtns = document.querySelectorAll('#category-bar button');
 
-                // Try to merge with localStorage if it exists and has historical data
-                const localData = localStorage.getItem('portfolioData');
-                if (localData) {
-                    const localParsed = JSON.parse(localData);
-                    // Keep historical data and current prices from localStorage
-                    if (localParsed.historicalData && localParsed.historicalData.length > 0) {
-                        jsonData.historicalData = localParsed.historicalData;
-                    }
-                    // Keep current prices if they exist
-                    jsonData.legs.forEach((leg, legIdx) => {
-                        leg.holdings.forEach((holding, holdingIdx) => {
-                            if (localParsed.legs[legIdx] && localParsed.legs[legIdx].holdings[holdingIdx]) {
-                                const localHolding = localParsed.legs[legIdx].holdings[holdingIdx];
-                                if (localHolding.currentPrice) {
-                                    holding.currentPrice = localHolding.currentPrice;
-                                }
-                            }
-                        });
-                    });
-                }
+    const pastelLight = document.getElementById('pastel-light');
 
-                portfolioData = jsonData;
-                console.log('Portfolio data loaded:', portfolioData);
-            } catch (error) {
-                console.error('Error loading data:', error);
-                alert('Error loading portfolio data. Check console for details.');
-            }
+    let offsetX = 0, offsetY = 0;
+    let scale = 1;
+    let isPanning = false;
+    let startX, startY;
+    let movedDistance = 0;
+    let selectedCategory = 'general';
+
+    const MIN_SCALE = 0.3;
+    const MAX_SCALE = 3;
+
+    // ── Transform ──
+
+    function applyTransform() {
+      viewport.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`;
+      updatePastelLight();
+    }
+
+    // ── Dynamic pastel light ──
+
+    function updatePastelLight() {
+      // Derive hue from pan position so the color shifts as you move
+      const hue = ((offsetX * 0.15) + (offsetY * 0.1) + 360) % 360;
+      const hue2 = (hue + 60) % 360;
+      // Position the glow center opposite to pan direction (feels like a light source)
+      const cx = 50 - offsetX * 0.02;
+      const cy = 50 - offsetY * 0.02;
+      pastelLight.style.background =
+        `radial-gradient(ellipse 80% 80% at ${cx}% ${cy}%, ` +
+        `hsla(${hue}, 70%, 75%, 0.18), ` +
+        `hsla(${hue2}, 60%, 65%, 0.08) 50%, ` +
+        `transparent 80%)`;
+    }
+
+    // Prevent context menu so right-click drag works
+    document.addEventListener('contextmenu', e => e.preventDefault());
+
+    document.addEventListener('mousedown', e => {
+      // Allow clicks on input/button
+      if (e.target.closest('#controls')) return;
+      isPanning = true;
+      startX = e.clientX - offsetX;
+      startY = e.clientY - offsetY;
+      movedDistance = 0;
+      document.body.classList.add('panning');
+    });
+
+    document.addEventListener('mousemove', e => {
+      if (!isPanning) return;
+      const dx = e.clientX - startX - offsetX;
+      const dy = e.clientY - startY - offsetY;
+      movedDistance += Math.abs(dx) + Math.abs(dy);
+      offsetX = e.clientX - startX;
+      offsetY = e.clientY - startY;
+      applyTransform();
+    });
+
+    document.addEventListener('mouseup', () => {
+      isPanning = false;
+      document.body.classList.remove('panning');
+    });
+
+    // ── Mouse wheel zoom ──
+
+    document.addEventListener('wheel', e => {
+      if (e.target.closest('#controls')) return;
+      e.preventDefault();
+      const zoomFactor = e.deltaY > 0 ? 0.92 : 1.08;
+      const newScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, scale * zoomFactor));
+
+      // Zoom toward cursor position
+      const rect = document.body.getBoundingClientRect();
+      const mx = e.clientX;
+      const my = e.clientY;
+      const ratio = newScale / scale;
+      offsetX = mx - ratio * (mx - offsetX);
+      offsetY = my - ratio * (my - offsetY);
+      scale = newScale;
+
+      applyTransform();
+    }, { passive: false });
+
+    // ── Touch pan + pinch-to-zoom ──
+
+    let touchStartX, touchStartY;
+    let lastPinchDist = 0;
+    let pinching = false;
+
+    function getTouchDist(e) {
+      const [a, b] = [e.touches[0], e.touches[1]];
+      return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+    }
+
+    function getTouchCenter(e) {
+      const [a, b] = [e.touches[0], e.touches[1]];
+      return { x: (a.clientX + b.clientX) / 2, y: (a.clientY + b.clientY) / 2 };
+    }
+
+    document.addEventListener('touchstart', e => {
+      if (e.target.closest('#controls')) return;
+      if (e.touches.length === 2) {
+        pinching = true;
+        lastPinchDist = getTouchDist(e);
+      } else if (e.touches.length === 1) {
+        pinching = false;
+        const t = e.touches[0];
+        touchStartX = t.clientX - offsetX;
+        touchStartY = t.clientY - offsetY;
+        movedDistance = 0;
+      }
+    }, { passive: true });
+
+    document.addEventListener('touchmove', e => {
+      if (e.target.closest('#controls')) return;
+
+      if (e.touches.length === 2 && pinching) {
+        e.preventDefault();
+        const dist = getTouchDist(e);
+        const center = getTouchCenter(e);
+        const zoomFactor = dist / lastPinchDist;
+        const newScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, scale * zoomFactor));
+        const ratio = newScale / scale;
+
+        offsetX = center.x - ratio * (center.x - offsetX);
+        offsetY = center.y - ratio * (center.y - offsetY);
+        scale = newScale;
+        lastPinchDist = dist;
+        applyTransform();
+      } else if (e.touches.length === 1 && !pinching) {
+        const t = e.touches[0];
+        const dx = t.clientX - touchStartX - offsetX;
+        const dy = t.clientY - touchStartY - offsetY;
+        movedDistance += Math.abs(dx) + Math.abs(dy);
+        offsetX = t.clientX - touchStartX;
+        offsetY = t.clientY - touchStartY;
+        applyTransform();
+      }
+    }, { passive: false });
+
+    document.addEventListener('touchend', e => {
+      if (e.touches.length < 2) pinching = false;
+      if (e.touches.length === 1) {
+        const t = e.touches[0];
+        touchStartX = t.clientX - offsetX;
+        touchStartY = t.clientY - offsetY;
+      }
+    }, { passive: true });
+
+    // ── Expanded view ──
+
+    const expandedOverlay = document.getElementById('expanded-overlay');
+    const expandedClose = document.getElementById('expanded-close');
+    const expandedSource = document.getElementById('expanded-source');
+    const expandedTitle = document.getElementById('expanded-title');
+    const expandedDate = document.getElementById('expanded-date');
+    const expandedLink = document.getElementById('expanded-link');
+    const claimsList = document.getElementById('claims-list');
+    const avgScoreCircle = document.querySelector('#expanded-avg-score .score-circle');
+
+    // Sample claims for demo
+    const sampleClaims = [
+      "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt.",
+      "Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip.",
+      "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat.",
+      "Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt.",
+      "Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque.",
+    ];
+
+    function openExpandedView(article) {
+      expandedSource.textContent = article.source?.name || '';
+      expandedTitle.textContent = article.title || '';
+      expandedDate.textContent = article.publishedAt
+        ? new Date(article.publishedAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+        : '';
+      expandedLink.href = article.url || '#';
+
+      // Generate random claims with scores
+      claimsList.innerHTML = '';
+      const scores = [];
+      const numClaims = 3 + Math.floor(Math.random() * 4); // 3-6 claims
+
+      for (let i = 0; i < numClaims; i++) {
+        const score = Math.floor(Math.random() * 10) + 1;
+        scores.push(score);
+
+        const claimItem = document.createElement('div');
+        claimItem.className = 'claim-item';
+
+        const scoreDiv = document.createElement('div');
+        scoreDiv.className = 'claim-score';
+        scoreDiv.textContent = score;
+
+        const textDiv = document.createElement('div');
+        textDiv.className = 'claim-text';
+        textDiv.textContent = sampleClaims[i % sampleClaims.length];
+
+        claimItem.appendChild(scoreDiv);
+        claimItem.appendChild(textDiv);
+        claimsList.appendChild(claimItem);
+      }
+
+      // Calculate and display average
+      const avg = (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1);
+      avgScoreCircle.textContent = avg;
+
+      expandedOverlay.style.display = 'flex';
+      requestAnimationFrame(() => expandedOverlay.classList.add('visible'));
+    }
+
+    function closeExpandedView() {
+      expandedOverlay.classList.remove('visible');
+      setTimeout(() => { expandedOverlay.style.display = 'none'; }, 300);
+    }
+
+    expandedClose.addEventListener('click', closeExpandedView);
+    expandedOverlay.addEventListener('click', e => {
+      if (e.target === expandedOverlay) closeExpandedView();
+    });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && expandedOverlay.classList.contains('visible')) {
+        closeExpandedView();
+      }
+    });
+
+    // Card click handler
+    viewport.addEventListener('click', e => {
+      const card = e.target.closest('.card');
+      if (!card) return;
+      // Ignore if user was panning or clicked on score badge
+      if (movedDistance > 8) return;
+      if (e.target.closest('.card-score')) return;
+
+      const article = card._articleData;
+      if (article) openExpandedView(article);
+    });
+
+    // ── Card warp effect ──
+
+    function applyWarp(card, clientX, clientY) {
+      const warp = card.querySelector('.card-warp');
+      if (!warp) return;
+      const rect = card.getBoundingClientRect();
+      const x = ((clientX - rect.left) / rect.width) * 100;
+      const y = ((clientY - rect.top) / rect.height) * 100;
+      warp.style.background = `radial-gradient(circle 120px at ${x}% ${y}%, rgba(255,255,255,0.15), transparent 70%)`;
+    }
+
+    // Mouse warp
+    viewport.addEventListener('mousemove', e => {
+      const card = e.target.closest('.card');
+      if (!card || isPanning) return;
+      applyWarp(card, e.clientX, e.clientY);
+    });
+
+    // Touch warp
+    let warpCard = null;
+    document.addEventListener('touchstart', e => {
+      if (e.touches.length !== 1) return;
+      const card = e.target.closest('.card');
+      if (card) warpCard = card;
+    }, { passive: true });
+
+    document.addEventListener('touchmove', e => {
+      if (!warpCard || pinching || e.touches.length !== 1) return;
+      applyWarp(warpCard, e.touches[0].clientX, e.touches[0].clientY);
+    }, { passive: true });
+
+    document.addEventListener('touchend', () => {
+      warpCard = null;
+    }, { passive: true });
+
+    // ── Category buttons ──
+
+    categoryBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        categoryBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        selectedCategory = btn.dataset.cat;
+      });
+    });
+
+    // ── Sample articles (demo mode) ──
+
+    const sampleArticles = [
+      { source: { name: 'Reuters' }, title: 'Global Markets Rally as Trade Tensions Ease Between Major Economies', url: 'https://example.com/article/1', publishedAt: '2026-02-03T10:00:00Z' },
+      { source: { name: 'Associated Press' }, title: 'NASA Confirms New Telescope Captures High-Resolution Images of Distant Exoplanets', url: 'https://example.com/article/2', publishedAt: '2026-02-03T09:30:00Z' },
+      { source: { name: 'The Washington Post' }, title: 'Senate Committee Advances Bipartisan Infrastructure Bill After Marathon Debate', url: 'https://example.com/article/3', publishedAt: '2026-02-02T22:15:00Z' },
+      { source: { name: 'BBC News' }, title: 'European Union Announces Sweeping New Regulations on Artificial Intelligence Development', url: 'https://example.com/article/4', publishedAt: '2026-02-02T18:00:00Z' },
+      { source: { name: 'TechCrunch' }, title: 'Startup Raises $200M to Build Next-Generation Quantum Computing Chips', url: 'https://example.com/article/5', publishedAt: '2026-02-02T15:45:00Z' },
+      { source: { name: 'ESPN' }, title: 'Underdog Team Stuns Champions in Overtime Thriller at Sold-Out Arena', url: 'https://example.com/article/6', publishedAt: '2026-02-02T12:00:00Z' },
+      { source: { name: 'The New York Times' }, title: 'Supreme Court to Hear Landmark Case on Digital Privacy Rights This Spring', url: 'https://example.com/article/7', publishedAt: '2026-02-01T20:30:00Z' },
+      { source: { name: 'Nature' }, title: 'Researchers Discover New Antibiotic Compound Effective Against Drug-Resistant Bacteria', url: 'https://example.com/article/8', publishedAt: '2026-02-01T16:00:00Z' },
+      { source: { name: 'Bloomberg' }, title: 'Oil Prices Surge After OPEC Announces Unexpected Production Cuts for Q2', url: 'https://example.com/article/9', publishedAt: '2026-02-01T14:20:00Z' },
+      { source: { name: 'The Guardian' }, title: 'Climate Scientists Warn Tipping Points May Be Closer Than Previously Estimated', url: 'https://example.com/article/10', publishedAt: '2026-02-01T11:00:00Z' },
+      { source: { name: 'Wired' }, title: 'Inside the Race to Build a Commercially Viable Fusion Reactor by 2030', url: 'https://example.com/article/11', publishedAt: '2026-01-31T19:00:00Z' },
+      { source: { name: 'CNBC' }, title: 'Federal Reserve Signals Potential Rate Adjustments Amid Mixed Economic Data', url: 'https://example.com/article/12', publishedAt: '2026-01-31T17:30:00Z' },
+      { source: { name: 'Al Jazeera' }, title: 'Peace Negotiations Resume in Geneva as Ceasefire Holds for Third Consecutive Week', url: 'https://example.com/article/13', publishedAt: '2026-01-31T13:00:00Z' },
+      { source: { name: 'Ars Technica' }, title: 'Major Browser Vendors Agree on New Standard for Password-Free Authentication', url: 'https://example.com/article/14', publishedAt: '2026-01-31T10:45:00Z' },
+      { source: { name: 'NPR' }, title: 'National Archives Releases Thousands of Previously Classified Cold War Documents', url: 'https://example.com/article/15', publishedAt: '2026-01-30T21:00:00Z' },
+      { source: { name: 'The Economist' }, title: 'How Shifting Demographics Are Reshaping Labor Markets Across Developed Nations', url: 'https://example.com/article/16', publishedAt: '2026-01-30T08:00:00Z' },
+    ];
+
+    // ── Fetch & render ──
+
+    // Load sample data on startup
+    updatePastelLight();
+    renderGrid(sampleArticles);
+
+    fetchBtn.addEventListener('click', loadArticles);
+    apiKeyInput.addEventListener('keydown', e => { if (e.key === 'Enter') loadArticles(); });
+
+    async function loadArticles() {
+      const key = apiKeyInput.value.trim();
+      if (!key) { renderGrid(sampleArticles); return; }
+
+      loading.classList.add('visible');
+      viewport.innerHTML = '';
+
+      try {
+        const res = await fetch(
+          `https://newsapi.org/v2/top-headlines?country=us&category=${selectedCategory}&pageSize=60&apiKey=${key}`
+        );
+        const data = await res.json();
+
+        if (data.status !== 'ok') {
+          alert('API error: ' + (data.message || 'Unknown error'));
+          loading.classList.remove('visible');
+          return;
         }
 
-        function renderCharts() {
-            if (!portfolioData) return;
+        const articles = data.articles.filter(a => a.title && a.title !== '[Removed]');
+        renderGrid(articles);
+      } catch (err) {
+        alert('Network error: ' + err.message);
+      }
 
-            renderTargetChart();
-            renderCurrentChart();
-            renderPerformanceChart();
+      loading.classList.remove('visible');
+    }
+
+    function renderGrid(articles) {
+      const cols = Math.ceil(Math.sqrt(articles.length));
+      const cardW = 340;
+      const cardH = 240;
+      const gap = 20;
+
+      // Center grid around viewport center
+      const totalW = cols * (cardW + gap);
+      const totalH = Math.ceil(articles.length / cols) * (cardH + gap);
+      const baseX = (window.innerWidth - totalW) / 2;
+      const baseY = (window.innerHeight - totalH) / 2;
+
+      // Reset pan to center
+      offsetX = 0;
+      offsetY = 0;
+      applyTransform();
+
+      articles.forEach((article, i) => {
+        const col = i % cols;
+        const row = Math.floor(i / cols);
+
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.style.left = `${baseX + col * (cardW + gap)}px`;
+        card.style.top = `${baseY + row * (cardH + gap)}px`;
+        card.style.cursor = 'pointer';
+        card._articleData = article;
+
+        // Warp effect layer
+        const warp = document.createElement('div');
+        warp.className = 'card-warp';
+        card.appendChild(warp);
+
+        if (article.urlToImage) {
+          const img = document.createElement('img');
+          img.className = 'card-image';
+          img.src = article.urlToImage;
+          img.alt = '';
+          img.loading = 'lazy';
+          card.appendChild(img);
         }
 
-        function renderTargetChart() {
-            const ctx = document.getElementById('targetChart').getContext('2d');
-
-            if (targetChart) {
-                targetChart.destroy();
-            }
-
-            const data = prepareDoughnutData(portfolioData, 'target');
-            console.log('Target chart data:', data);
-
-            try {
-                targetChart = new Chart(ctx, {
-                    type: 'doughnut',
-                    data: {
-                        labels: data.labels,
-                        datasets: [{
-                            data: data.values,
-                            backgroundColor: data.colors,
-                            borderColor: 'white',
-                            borderWidth: 2
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: true,
-                        plugins: {
-                            legend: {
-                                display: false
-                            },
-                            tooltip: {
-                                callbacks: {
-                                    label: (context) => {
-                                        const value = context.parsed;
-                                        const percent = ((value / portfolioData.totalPortfolioValue) * 100).toFixed(2);
-                                        return `${context.label}: $${value.toLocaleString()} (${percent}%)`;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                });
-
-                renderLegend('targetLegend', data.legend);
-            } catch (error) {
-                console.error('Error rendering target chart:', error);
-                document.getElementById('targetChart').parentElement.innerHTML += '<p style="color: red;">Error rendering chart. Check console.</p>';
-            }
-        }
-
-        async function renderCurrentChart() {
-            const ctx = document.getElementById('currentChart').getContext('2d');
-
-            if (currentChart) {
-                currentChart.destroy();
-            }
-
-            // Calculate current values
-            const currentData = await calculateCurrentValues();
-            const data = prepareDoughnutData(currentData, 'current');
-            console.log('Current chart data:', data);
-
-            try {
-                const totalValue = currentData.totalPortfolioValue || portfolioData.totalPortfolioValue;
-
-                currentChart = new Chart(ctx, {
-                    type: 'doughnut',
-                    data: {
-                        labels: data.labels,
-                        datasets: [{
-                            data: data.values,
-                            backgroundColor: data.colors,
-                            borderColor: 'white',
-                            borderWidth: 2
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: true,
-                        plugins: {
-                            legend: {
-                                display: false
-                            },
-                            tooltip: {
-                                callbacks: {
-                                    label: (context) => {
-                                        const value = context.parsed;
-                                        const percent = ((value / totalValue) * 100).toFixed(2);
-                                        return `${context.label}: $${value.toLocaleString()} (${percent}%)`;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                });
-
-                renderLegend('currentLegend', data.legend);
-            } catch (error) {
-                console.error('Error rendering current chart:', error);
-                document.getElementById('currentChart').parentElement.innerHTML += '<p style="color: red;">Error rendering chart. Check console.</p>';
-            }
-        }
-
-        function prepareDoughnutData(data, type) {
-            const labels = [];
-            const values = [];
-            const chartColors = [];
-            const legend = [];
-            let colorIndex = 0;
-
-            data.legs.forEach((leg, legIndex) => {
-                leg.holdings.forEach((holding, holdingIndex) => {
-                    const holdingValue = type === 'target' ? holding.targetValue : holding.currentValue || holding.targetValue;
-                    const label = holding.symbol || holding.name;
-                    const fullLabel = `${leg.name} - ${label}`;
-
-                    labels.push(fullLabel);
-                    values.push(holdingValue);
-                    chartColors.push(colors[colorIndex % colors.length]);
-
-                    legend.push({
-                        label: fullLabel,
-                        value: holdingValue,
-                        color: colors[colorIndex % colors.length]
-                    });
-                    colorIndex++;
-                });
-            });
-
-            console.log(`Prepared ${type} doughnut data:`, { labels, values, colors: chartColors, legend });
-            return { labels, values, colors: chartColors, legend };
-        }
-
-        function renderLegend(elementId, legendData) {
-            const container = document.getElementById(elementId);
-            container.innerHTML = legendData.map((item, index) => `
-                <div class="legend-item">
-                    <span class="legend-label">
-                        <span style="display: inline-block; width: 12px; height: 12px; background: ${item.color}; margin-right: 8px; border-radius: 2px;"></span>
-                        ${item.label}
-                    </span>
-                    <span class="legend-value">$${item.value.toLocaleString()}</span>
-                </div>
-            `).join('');
-        }
-
-        async function calculateCurrentValues() {
-            const currentData = JSON.parse(JSON.stringify(portfolioData));
-            let totalCurrentValue = 0;
-
-            for (let leg of currentData.legs) {
-                let legTotal = 0;
-
-                for (let holding of leg.holdings) {
-                    if (holding.isManual) {
-                        holding.currentValue = holding.manualValue || 0;
-                    } else if (holding.shares > 0) {
-                        // This will be updated when we fetch prices
-                        holding.currentValue = holding.shares * (holding.currentPrice || holding.costBasis || 0);
-                    } else {
-                        holding.currentValue = holding.targetValue;
-                    }
-                    legTotal += holding.currentValue;
-                }
-
-                leg.currentValue = legTotal;
-                totalCurrentValue += legTotal;
-            }
-
-            currentData.totalPortfolioValue = totalCurrentValue;
-            return currentData;
-        }
-
-        function renderPerformanceChart() {
-            const ctx = document.getElementById('performanceChart').getContext('2d');
-
-            if (performanceChart) {
-                performanceChart.destroy();
-            }
-
-            // Prepare historical data
-            const historicalData = portfolioData.historicalData || [];
-            const labels = historicalData.map(d => d.date);
-            const values = historicalData.map(d => d.profitLoss);
-
-            performanceChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Profit/Loss',
-                        data: values,
-                        borderColor: '#667eea',
-                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                        borderWidth: 2,
-                        fill: true,
-                        tension: 0.4,
-                        pointRadius: 4,
-                        pointHoverRadius: 6,
-                        pointBackgroundColor: '#667eea'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: true,
-                    plugins: {
-                        legend: {
-                            display: false
-                        },
-                        tooltip: {
-                            mode: 'index',
-                            intersect: false,
-                            callbacks: {
-                                label: (context) => {
-                                    const value = context.parsed.y;
-                                    const sign = value >= 0 ? '+' : '';
-                                    return `${sign}$${value.toLocaleString()}`;
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                callback: (value) => {
-                                    const sign = value >= 0 ? '+' : '';
-                                    return `${sign}$${value.toLocaleString()}`;
-                                }
-                            },
-                            grid: {
-                                color: 'rgba(0, 0, 0, 0.05)'
-                            }
-                        },
-                        x: {
-                            grid: {
-                                display: false
-                            }
-                        }
-                    }
-                }
-            });
-        }
-
-        async function refreshPrices() {
-            if (!portfolioData.apiKey || portfolioData.apiKey === 'YOUR_ALPHAVANTAGE_API_KEY_HERE') {
-                showStatus('Please set your Alpha Vantage API key first', true);
-                return;
-            }
-
-            showStatus('Fetching latest prices...');
-
-            try {
-                for (let leg of portfolioData.legs) {
-                    for (let holding of leg.holdings) {
-                        if (!holding.isManual && holding.symbol) {
-                            const price = await fetchStockPrice(holding.symbol);
-                            if (price) {
-                                holding.currentPrice = price;
-                                holding.currentValue = holding.shares * price;
-                            }
-                            // Add delay to avoid API rate limits
-                            await sleep(12000); // Alpha Vantage free tier: 5 calls per minute
-                        }
-                    }
-                }
-
-                // Calculate total profit/loss
-                const totalCost = calculateTotalCost();
-                const totalCurrent = calculateTotalCurrent();
-                const profitLoss = totalCurrent - totalCost;
-
-                // Add to historical data
-                const today = new Date().toISOString().split('T')[0];
-                portfolioData.historicalData = portfolioData.historicalData || [];
-
-                // Remove today's entry if it exists
-                portfolioData.historicalData = portfolioData.historicalData.filter(d => d.date !== today);
-
-                // Add new entry
-                portfolioData.historicalData.push({
-                    date: today,
-                    profitLoss: profitLoss,
-                    totalValue: totalCurrent
-                });
-
-                // Save to localStorage
-                localStorage.setItem('portfolioData', JSON.stringify(portfolioData));
-
-                // Re-render charts
-                renderCharts();
-
-                showStatus('Prices updated successfully!');
-            } catch (error) {
-                console.error('Error fetching prices:', error);
-                showStatus('Error fetching prices: ' + error.message, true);
-            }
-        }
-
-        async function fetchStockPrice(symbol) {
-            try {
-                const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${portfolioData.apiKey}`;
-                const response = await fetch(url);
-                const data = await response.json();
-
-                if (data['Global Quote'] && data['Global Quote']['05. price']) {
-                    return parseFloat(data['Global Quote']['05. price']);
-                } else {
-                    console.error('No price data for', symbol, data);
-                    return null;
-                }
-            } catch (error) {
-                console.error('Error fetching price for', symbol, error);
-                return null;
-            }
-        }
-
-        function calculateTotalCost() {
-            let total = 0;
-            portfolioData.legs.forEach(leg => {
-                leg.holdings.forEach(holding => {
-                    if (!holding.isManual) {
-                        total += holding.shares * holding.costBasis;
-                    }
-                });
-            });
-            return total;
-        }
-
-        function calculateTotalCurrent() {
-            let total = 0;
-            portfolioData.legs.forEach(leg => {
-                leg.holdings.forEach(holding => {
-                    if (holding.isManual) {
-                        total += holding.manualValue || 0;
-                    } else {
-                        total += holding.currentValue || (holding.shares * holding.costBasis);
-                    }
-                });
-            });
-            return total;
-        }
-
-        function sleep(ms) {
-            return new Promise(resolve => setTimeout(resolve, ms));
-        }
-
-        function openDataModal() {
-            renderDataForm();
-            document.getElementById('dataModal').style.display = 'block';
-        }
-
-        function closeDataModal() {
-            document.getElementById('dataModal').style.display = 'none';
-        }
-
-        function renderDataForm() {
-            document.getElementById('apiKey').value = portfolioData.apiKey || '';
-
-            let html = '<h3>Holdings</h3><div class="holdings-grid">';
-
-            portfolioData.legs.forEach((leg, legIndex) => {
-                html += `<div><h3>${leg.name}</h3>`;
-
-                leg.holdings.forEach((holding, holdingIndex) => {
-                    const id = `${legIndex}_${holdingIndex}`;
-                    const displayName = holding.name || holding.symbol;
-
-                    html += `
-                        <div class="holding-card">
-                            <h4>${displayName}</h4>
-                            <div class="holding-inputs">
-                    `;
-
-                    if (holding.isManual) {
-                        html += `
-                            <div class="form-group">
-                                <label>Current Value ($):</label>
-                                <input type="number" step="0.01" id="manual_${id}"
-                                    value="${holding.manualValue || 0}">
-                            </div>
-                        `;
-                    } else {
-                        html += `
-                            <div class="form-group">
-                                <label>Shares:</label>
-                                <input type="number" step="0.0001" id="shares_${id}"
-                                    value="${holding.shares || 0}">
-                            </div>
-                            <div class="form-group">
-                                <label>Cost Basis ($):</label>
-                                <input type="number" step="0.01" id="cost_${id}"
-                                    value="${holding.costBasis || 0}">
-                            </div>
-                        `;
-                    }
-
-                    html += `
-                            </div>
-                        </div>
-                    `;
-                });
-
-                html += '</div>';
-            });
-
-            html += '</div>';
-            document.getElementById('holdingsForm').innerHTML = html;
-        }
-
-        function saveData() {
-            // Update API key
-            portfolioData.apiKey = document.getElementById('apiKey').value;
-
-            // Update holdings
-            portfolioData.legs.forEach((leg, legIndex) => {
-                leg.holdings.forEach((holding, holdingIndex) => {
-                    const id = `${legIndex}_${holdingIndex}`;
-
-                    if (holding.isManual) {
-                        const manualInput = document.getElementById(`manual_${id}`);
-                        if (manualInput) {
-                            holding.manualValue = parseFloat(manualInput.value) || 0;
-                        }
-                    } else {
-                        const sharesInput = document.getElementById(`shares_${id}`);
-                        const costInput = document.getElementById(`cost_${id}`);
-
-                        if (sharesInput) holding.shares = parseFloat(sharesInput.value) || 0;
-                        if (costInput) holding.costBasis = parseFloat(costInput.value) || 0;
-                    }
-                });
-            });
-
-            // Save to localStorage
-            localStorage.setItem('portfolioData', JSON.stringify(portfolioData));
-
-            showStatus('Data saved successfully!');
-            renderCharts();
-
-            setTimeout(() => {
-                closeDataModal();
-            }, 1500);
-        }
-
-        function exportData() {
-            const dataStr = JSON.stringify(portfolioData, null, 2);
-            const dataBlob = new Blob([dataStr], { type: 'application/json' });
-            const url = URL.createObjectURL(dataBlob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = 'portfolio-data.json';
-            link.click();
-            URL.revokeObjectURL(url);
-            showStatus('Data exported successfully!');
-        }
-
-        function importData() {
-            document.getElementById('fileInput').click();
-        }
-
-        function handleFileImport(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                try {
-                    portfolioData = JSON.parse(e.target.result);
-                    localStorage.setItem('portfolioData', JSON.stringify(portfolioData));
-                    showStatus('Data imported successfully!');
-                    renderCharts();
-                    renderDataForm();
-                } catch (error) {
-                    showStatus('Error importing data: ' + error.message, true);
-                }
-            };
-            reader.readAsText(file);
-        }
-
-        function showStatus(message, isError = false) {
-            const statusDiv = document.getElementById('statusMessage');
-            statusDiv.className = isError ? 'status error' : 'status';
-            statusDiv.textContent = message;
-            statusDiv.style.display = 'block';
-
-            if (!isError) {
-                setTimeout(() => {
-                    statusDiv.style.display = 'none';
-                }, 3000);
-            }
-        }
-
-        // Close modal when clicking outside
-        window.onclick = function(event) {
-            const modal = document.getElementById('dataModal');
-            if (event.target == modal) {
-                closeDataModal();
-            }
-        }
-    </script>
+        const source = document.createElement('div');
+        source.className = 'card-source';
+        source.textContent = article.source?.name || '';
+        card.appendChild(source);
+
+        const title = document.createElement('div');
+        title.className = 'card-title';
+        title.textContent = article.title;
+        card.appendChild(title);
+
+        const date = document.createElement('div');
+        date.className = 'card-date';
+        date.textContent = article.publishedAt
+          ? new Date(article.publishedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+          : '';
+        card.appendChild(date);
+
+        // Source quality score badge
+        const score = document.createElement('div');
+        score.className = 'card-score';
+        score.textContent = Math.floor(Math.random() * 10) + 1;
+        const tooltip = document.createElement('div');
+        tooltip.className = 'card-score-tooltip';
+        tooltip.textContent = "This scale measures the article's overall quality of sourcing.";
+        score.appendChild(tooltip);
+        card.appendChild(score);
+
+        viewport.appendChild(card);
+      });
+    }
+  </script>
 </body>
 </html>
