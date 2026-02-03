@@ -273,14 +273,38 @@
       });
     });
 
+    // ── Sample articles (demo mode) ──
+
+    const sampleArticles = [
+      { source: { name: 'Reuters' }, title: 'Global Markets Rally as Trade Tensions Ease Between Major Economies', url: 'https://example.com/article/1', publishedAt: '2026-02-03T10:00:00Z' },
+      { source: { name: 'Associated Press' }, title: 'NASA Confirms New Telescope Captures High-Resolution Images of Distant Exoplanets', url: 'https://example.com/article/2', publishedAt: '2026-02-03T09:30:00Z' },
+      { source: { name: 'The Washington Post' }, title: 'Senate Committee Advances Bipartisan Infrastructure Bill After Marathon Debate', url: 'https://example.com/article/3', publishedAt: '2026-02-02T22:15:00Z' },
+      { source: { name: 'BBC News' }, title: 'European Union Announces Sweeping New Regulations on Artificial Intelligence Development', url: 'https://example.com/article/4', publishedAt: '2026-02-02T18:00:00Z' },
+      { source: { name: 'TechCrunch' }, title: 'Startup Raises $200M to Build Next-Generation Quantum Computing Chips', url: 'https://example.com/article/5', publishedAt: '2026-02-02T15:45:00Z' },
+      { source: { name: 'ESPN' }, title: 'Underdog Team Stuns Champions in Overtime Thriller at Sold-Out Arena', url: 'https://example.com/article/6', publishedAt: '2026-02-02T12:00:00Z' },
+      { source: { name: 'The New York Times' }, title: 'Supreme Court to Hear Landmark Case on Digital Privacy Rights This Spring', url: 'https://example.com/article/7', publishedAt: '2026-02-01T20:30:00Z' },
+      { source: { name: 'Nature' }, title: 'Researchers Discover New Antibiotic Compound Effective Against Drug-Resistant Bacteria', url: 'https://example.com/article/8', publishedAt: '2026-02-01T16:00:00Z' },
+      { source: { name: 'Bloomberg' }, title: 'Oil Prices Surge After OPEC Announces Unexpected Production Cuts for Q2', url: 'https://example.com/article/9', publishedAt: '2026-02-01T14:20:00Z' },
+      { source: { name: 'The Guardian' }, title: 'Climate Scientists Warn Tipping Points May Be Closer Than Previously Estimated', url: 'https://example.com/article/10', publishedAt: '2026-02-01T11:00:00Z' },
+      { source: { name: 'Wired' }, title: 'Inside the Race to Build a Commercially Viable Fusion Reactor by 2030', url: 'https://example.com/article/11', publishedAt: '2026-01-31T19:00:00Z' },
+      { source: { name: 'CNBC' }, title: 'Federal Reserve Signals Potential Rate Adjustments Amid Mixed Economic Data', url: 'https://example.com/article/12', publishedAt: '2026-01-31T17:30:00Z' },
+      { source: { name: 'Al Jazeera' }, title: 'Peace Negotiations Resume in Geneva as Ceasefire Holds for Third Consecutive Week', url: 'https://example.com/article/13', publishedAt: '2026-01-31T13:00:00Z' },
+      { source: { name: 'Ars Technica' }, title: 'Major Browser Vendors Agree on New Standard for Password-Free Authentication', url: 'https://example.com/article/14', publishedAt: '2026-01-31T10:45:00Z' },
+      { source: { name: 'NPR' }, title: 'National Archives Releases Thousands of Previously Classified Cold War Documents', url: 'https://example.com/article/15', publishedAt: '2026-01-30T21:00:00Z' },
+      { source: { name: 'The Economist' }, title: 'How Shifting Demographics Are Reshaping Labor Markets Across Developed Nations', url: 'https://example.com/article/16', publishedAt: '2026-01-30T08:00:00Z' },
+    ];
+
     // ── Fetch & render ──
+
+    // Load sample data on startup
+    renderGrid(sampleArticles);
 
     fetchBtn.addEventListener('click', loadArticles);
     apiKeyInput.addEventListener('keydown', e => { if (e.key === 'Enter') loadArticles(); });
 
     async function loadArticles() {
       const key = apiKeyInput.value.trim();
-      if (!key) { alert('Please enter a NewsAPI key.'); return; }
+      if (!key) { renderGrid(sampleArticles); return; }
 
       loading.classList.add('visible');
       viewport.innerHTML = '';
