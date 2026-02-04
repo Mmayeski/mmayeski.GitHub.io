@@ -241,19 +241,81 @@
     /* Expanding card animation */
     #expanding-card {
       position: fixed;
-      background: rgba(255, 255, 255, 0.08);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
+      background: rgba(10, 10, 20, 0.98);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
       border: 1px solid rgba(255, 255, 255, 0.15);
       border-radius: 12px;
       z-index: 250;
-      pointer-events: none;
       display: none;
+      overflow: hidden;
     }
 
     #expanding-card.animating {
       display: block;
       transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    #expanding-card.expanded {
+      display: block;
+      pointer-events: auto;
+    }
+
+    #expanding-card .card-preview {
+      padding: 20px;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      opacity: 1;
+      transition: opacity 0.2s;
+    }
+
+    #expanding-card.animating .card-preview {
+      opacity: 0;
+    }
+
+    #expanding-card .expanded-inner {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      padding: 40px;
+      gap: 40px;
+      overflow: hidden;
+      opacity: 0;
+      transition: opacity 0.3s ease 0.2s;
+    }
+
+    #expanding-card.expanded .expanded-inner {
+      opacity: 1;
+    }
+
+    #expanding-card .close-btn {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #e0e0e0;
+      font-size: 24px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s, opacity 0.3s;
+      opacity: 0;
+      z-index: 10;
+    }
+
+    #expanding-card.expanded .close-btn {
+      opacity: 1;
+    }
+
+    #expanding-card .close-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
     }
 
     /* Expanded article view */
@@ -458,6 +520,156 @@
       color: #aaa;
     }
 
+    /* Expanding card inner styles */
+    #expanding-card .card-preview .preview-source {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #8888cc;
+      font-weight: 600;
+    }
+
+    #expanding-card .card-preview .preview-title {
+      font-size: 15px;
+      font-weight: 600;
+      line-height: 1.4;
+      color: #e0e0e0;
+    }
+
+    #expanding-card .card-preview .preview-date {
+      font-size: 11px;
+      color: #777;
+    }
+
+    #expanding-card .expanded-left {
+      flex: 0 0 320px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    #expanding-card .expanded-thumbnail {
+      width: 100%;
+      aspect-ratio: 16/9;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #555;
+      font-size: 13px;
+    }
+
+    #expanding-card .expanded-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    #expanding-card .exp-source {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #8888cc;
+      font-weight: 600;
+    }
+
+    #expanding-card .exp-title {
+      font-size: 20px;
+      font-weight: 600;
+      line-height: 1.4;
+      color: #e0e0e0;
+    }
+
+    #expanding-card .exp-date {
+      font-size: 12px;
+      color: #666;
+    }
+
+    #expanding-card .expanded-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px 24px;
+      background: rgba(80, 80, 180, 0.5);
+      border: 1px solid rgba(150, 150, 255, 0.3);
+      border-radius: 8px;
+      color: #e0e0e0;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+      margin-top: auto;
+    }
+
+    #expanding-card .expanded-link:hover {
+      background: rgba(80, 80, 180, 0.7);
+    }
+
+    #expanding-card .expanded-right {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    #expanding-card .expanded-right h3 {
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #888;
+      margin-bottom: 16px;
+      font-weight: 600;
+    }
+
+    #expanding-card .claims-list {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding-right: 10px;
+    }
+
+    #expanding-card .avg-score-box {
+      margin-top: 20px;
+      padding: 16px;
+      background: rgba(180, 160, 220, 0.15);
+      border: 1px solid rgba(180, 160, 220, 0.3);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    #expanding-card .avg-score-box .score-circle {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: rgba(180, 160, 220, 0.4);
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      font-weight: 700;
+      color: #e8e0f0;
+    }
+
+    #expanding-card .avg-score-box .score-label {
+      font-size: 13px;
+      color: #aaa;
+    }
+
+    #expanding-card .avg-score-box .score-label strong {
+      display: block;
+      font-size: 16px;
+      color: #e0e0e0;
+      margin-top: 4px;
+    }
+
     #expanded-avg-score .score-label strong {
       display: block;
       font-size: 16px;
@@ -491,25 +703,27 @@
   <div id="viewport"></div>
 
   <!-- Expanding card animation -->
-  <div id="expanding-card"></div>
-
-  <!-- Expanded article overlay -->
-  <div id="expanded-overlay">
-    <button id="expanded-close">&times;</button>
-    <div id="expanded-content">
-      <div id="expanded-left">
-        <div id="expanded-thumbnail">Thumbnail</div>
-        <div id="expanded-meta">
-          <div id="expanded-source"></div>
-          <div id="expanded-title"></div>
-          <div id="expanded-date"></div>
+  <div id="expanding-card">
+    <div class="card-preview">
+      <div class="preview-source"></div>
+      <div class="preview-title"></div>
+      <div class="preview-date"></div>
+    </div>
+    <button class="close-btn">&times;</button>
+    <div class="expanded-inner">
+      <div class="expanded-left">
+        <div class="expanded-thumbnail">Thumbnail</div>
+        <div class="expanded-meta">
+          <div class="exp-source"></div>
+          <div class="exp-title"></div>
+          <div class="exp-date"></div>
         </div>
-        <a id="expanded-link" target="_blank" rel="noopener noreferrer">Visit Article</a>
+        <a class="expanded-link" target="_blank" rel="noopener noreferrer">Visit Article</a>
       </div>
-      <div id="expanded-right">
+      <div class="expanded-right">
         <h3>Source Claims Analysis</h3>
-        <div id="claims-list"></div>
-        <div id="expanded-avg-score">
+        <div class="claims-list"></div>
+        <div class="avg-score-box">
           <div class="score-circle"></div>
           <div class="score-label">
             Average Score
@@ -678,14 +892,6 @@
 
     // ── Expanded view ──
 
-    const expandedOverlay = document.getElementById('expanded-overlay');
-    const expandedClose = document.getElementById('expanded-close');
-    const expandedSource = document.getElementById('expanded-source');
-    const expandedTitle = document.getElementById('expanded-title');
-    const expandedDate = document.getElementById('expanded-date');
-    const expandedLink = document.getElementById('expanded-link');
-    const claimsList = document.getElementById('claims-list');
-    const avgScoreCircle = document.querySelector('#expanded-avg-score .score-circle');
     const expandingCard = document.getElementById('expanding-card');
 
     // Claims data loaded from JSON file
@@ -702,8 +908,20 @@
       { text: "This article has not yet been analyzed.", score: null, reasoning: "Pending review" }
     ];
 
-    function renderClaims(claims, avgScore) {
-      claimsList.innerHTML = '';
+    // Expanding card inner elements
+    const expPreviewSource = expandingCard.querySelector('.preview-source');
+    const expPreviewTitle = expandingCard.querySelector('.preview-title');
+    const expPreviewDate = expandingCard.querySelector('.preview-date');
+    const expSource = expandingCard.querySelector('.exp-source');
+    const expTitle = expandingCard.querySelector('.exp-title');
+    const expDate = expandingCard.querySelector('.exp-date');
+    const expLink = expandingCard.querySelector('.expanded-link');
+    const expClaimsList = expandingCard.querySelector('.claims-list');
+    const expScoreCircle = expandingCard.querySelector('.avg-score-box .score-circle');
+    const expCloseBtn = expandingCard.querySelector('.close-btn');
+
+    function renderClaimsInCard(claims, avgScore) {
+      expClaimsList.innerHTML = '';
 
       claims.forEach(claim => {
         const claimItem = document.createElement('div');
@@ -723,35 +941,47 @@
 
         claimItem.appendChild(scoreDiv);
         claimItem.appendChild(textDiv);
-        claimsList.appendChild(claimItem);
+        expClaimsList.appendChild(claimItem);
       });
 
-      avgScoreCircle.textContent = avgScore !== null ? avgScore : '?';
-      if (avgScore === null) avgScoreCircle.style.opacity = '0.4';
-      else avgScoreCircle.style.opacity = '1';
+      expScoreCircle.textContent = avgScore !== null ? avgScore : '?';
+      if (avgScore === null) expScoreCircle.style.opacity = '0.4';
+      else expScoreCircle.style.opacity = '1';
     }
 
     function openExpandedView(article, cardElement) {
-      expandedSource.textContent = article.source?.name || '';
-      expandedTitle.textContent = article.title || '';
-      expandedDate.textContent = article.publishedAt
+      const sourceName = article.source?.name || '';
+      const title = article.title || '';
+      const dateStr = article.publishedAt
         ? new Date(article.publishedAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
         : '';
-      expandedLink.href = article.url || '#';
+
+      // Populate preview (shown during animation)
+      expPreviewSource.textContent = sourceName;
+      expPreviewTitle.textContent = title;
+      expPreviewDate.textContent = dateStr;
+
+      // Populate expanded content
+      expSource.textContent = sourceName;
+      expTitle.textContent = title;
+      expDate.textContent = dateStr;
+      expLink.href = article.url || '#';
 
       // Look up claims for this article
       const articleData = claimsData?.articles?.[article.url];
-
       if (articleData && articleData.claims) {
-        renderClaims(articleData.claims, articleData.avg_score);
+        renderClaimsInCard(articleData.claims, articleData.avg_score);
       } else {
-        renderClaims(fallbackClaims, null);
+        renderClaimsInCard(fallbackClaims, null);
       }
 
       // Animate card expansion
       if (cardElement) {
         const rect = cardElement.getBoundingClientRect();
         const padding = 20;
+
+        // Reset classes
+        expandingCard.classList.remove('expanded', 'animating');
 
         // Position at card location
         expandingCard.style.left = rect.left + 'px';
@@ -772,32 +1002,34 @@
         expandingCard.style.height = `calc(100vh - ${padding * 2}px)`;
         expandingCard.style.borderRadius = '16px';
 
-        // Show overlay after animation
+        // After animation, show full content
         setTimeout(() => {
-          expandedOverlay.style.display = 'flex';
-          requestAnimationFrame(() => {
-            expandedOverlay.classList.add('visible');
-            expandingCard.classList.remove('animating');
-            expandingCard.style.display = 'none';
-          });
-        }, 350);
-      } else {
-        expandedOverlay.style.display = 'flex';
-        requestAnimationFrame(() => expandedOverlay.classList.add('visible'));
+          expandingCard.classList.remove('animating');
+          expandingCard.classList.add('expanded');
+        }, 400);
       }
     }
 
     function closeExpandedView() {
-      expandedOverlay.classList.remove('visible');
-      setTimeout(() => { expandedOverlay.style.display = 'none'; }, 300);
+      expandingCard.classList.remove('expanded');
+      expandingCard.classList.add('animating');
+
+      // Animate back (optional: could animate to original position)
+      expandingCard.style.opacity = '0';
+
+      setTimeout(() => {
+        expandingCard.style.display = 'none';
+        expandingCard.style.opacity = '';
+        expandingCard.classList.remove('animating');
+      }, 300);
     }
 
-    expandedClose.addEventListener('click', closeExpandedView);
-    expandedOverlay.addEventListener('click', e => {
-      if (e.target === expandedOverlay) closeExpandedView();
+    expCloseBtn.addEventListener('click', closeExpandedView);
+    expandingCard.addEventListener('click', e => {
+      if (e.target === expandingCard) closeExpandedView();
     });
     document.addEventListener('keydown', e => {
-      if (e.key === 'Escape' && expandedOverlay.classList.contains('visible')) {
+      if (e.key === 'Escape' && expandingCard.classList.contains('expanded')) {
         closeExpandedView();
       }
     });
