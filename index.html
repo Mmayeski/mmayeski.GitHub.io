@@ -7,6 +7,11 @@
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
+    html {
+      overflow: hidden;
+      overscroll-behavior: none;
+    }
+
     body {
       overflow: hidden;
       background: #0f0f1a;
@@ -16,6 +21,8 @@
       width: 100vw;
       cursor: grab;
       user-select: none;
+      touch-action: none;
+      overscroll-behavior: none;
     }
 
     body.panning { cursor: grabbing; }
@@ -262,8 +269,10 @@
     }
 
     #expanding-card .card-preview {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
       padding: 20px;
-      height: 100%;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
@@ -271,23 +280,27 @@
       transition: opacity 0.2s;
     }
 
-    #expanding-card.animating .card-preview {
+    #expanding-card.expanded .card-preview {
       opacity: 0;
+      pointer-events: none;
     }
 
     #expanding-card .expanded-inner {
-      width: 100%;
-      height: 100%;
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
       display: flex;
       padding: 40px;
       gap: 40px;
       overflow: hidden;
       opacity: 0;
-      transition: opacity 0.3s ease 0.2s;
+      pointer-events: none;
+      transition: opacity 0.3s ease 0.1s;
     }
 
     #expanding-card.expanded .expanded-inner {
       opacity: 1;
+      pointer-events: auto;
     }
 
     #expanding-card .close-btn {
@@ -316,6 +329,25 @@
 
     #expanding-card .close-btn:hover {
       background: rgba(255, 255, 255, 0.2);
+    }
+
+    /* Mobile/tablet adjustments for expanded view */
+    @media (max-width: 900px) {
+      #expanding-card .expanded-inner {
+        flex-direction: column;
+        padding: 20px;
+        gap: 20px;
+        overflow-y: auto;
+      }
+
+      #expanding-card .expanded-left {
+        flex: 0 0 auto;
+      }
+
+      #expanding-card .expanded-right {
+        flex: 1;
+        min-height: 0;
+      }
     }
 
     /* Expanded article view */
@@ -871,6 +903,7 @@
         lastPinchDist = dist;
         applyTransform();
       } else if (e.touches.length === 1 && !pinching) {
+        e.preventDefault();
         const t = e.touches[0];
         const dx = t.clientX - touchStartX - offsetX;
         const dy = t.clientY - touchStartY - offsetY;
