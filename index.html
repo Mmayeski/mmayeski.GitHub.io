@@ -7,6 +7,11 @@
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
+    html {
+      overflow: hidden;
+      overscroll-behavior: none;
+    }
+
     body {
       overflow: hidden;
       background: #0f0f1a;
@@ -16,6 +21,8 @@
       width: 100vw;
       cursor: grab;
       user-select: none;
+      touch-action: none;
+      overscroll-behavior: none;
     }
 
     body.panning { cursor: grabbing; }
@@ -896,6 +903,7 @@
         lastPinchDist = dist;
         applyTransform();
       } else if (e.touches.length === 1 && !pinching) {
+        e.preventDefault();
         const t = e.touches[0];
         const dx = t.clientX - touchStartX - offsetX;
         const dy = t.clientY - touchStartY - offsetY;
