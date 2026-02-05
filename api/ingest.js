@@ -34,16 +34,17 @@ const RSS_FEEDS = [
   { url: 'https://variety.com/feed/', categories: ['entertainment'], source: 'Variety' },
 ];
 
-// Category positions for clustering (center points) - spaced to avoid overlap
+// Category positions for clustering (center points) - spaced wider to avoid overlap
+// Each cluster can be ~1440px wide (4 cols × 340px + gaps), so use 1800px spacing
 const CATEGORY_CENTERS = {
-  technology: { x: -800, y: -800 },
-  science: { x: 800, y: -800 },
-  business: { x: -800, y: 0 },
-  world: { x: 0, y: 0 },
-  politics: { x: 800, y: 0 },
-  health: { x: -800, y: 800 },
-  sports: { x: 0, y: 800 },
-  entertainment: { x: 800, y: 800 },
+  technology: { x: -1800, y: -1200 },
+  science: { x: 0, y: -1200 },
+  business: { x: 1800, y: -1200 },
+  politics: { x: -1800, y: 600 },
+  world: { x: 0, y: 600 },
+  health: { x: 1800, y: 600 },
+  sports: { x: -900, y: 2400 },
+  entertainment: { x: 900, y: 2400 },
 };
 
 export default async function handler(req, res) {
@@ -60,7 +61,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const results = { success: 0, skipped: 0, errors: 0 };
+    const results = { inserted: 0, errors: 0 };
     const allArticles = [];
 
     // Fetch all feeds in parallel
@@ -89,25 +90,21 @@ export default async function handler(req, res) {
     // Calculate positions for articles
     const articlesWithPositions = calculatePositions(allArticles);
 
-    // Upsert articles into database
+    // Upsert articles into database (updates existing articles including positions)
     for (const article of articlesWithPositions) {
       try {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('articles')
           .upsert(article, {
-            onConflict: 'url',
-            ignoreDuplicates: true
-          });
+            onConflict: 'url'
+          })
+          .select('id');
 
         if (error) {
-          if (error.code === '23505') { // Duplicate
-            results.skipped++;
-          } else {
-            console.error('Insert error:', error);
-            results.errors++;
-          }
+          console.error('Upsert error:', error);
+          results.errors++;
         } else {
-          results.success++;
+          results.inserted++;
         }
       } catch (err) {
         results.errors++;
