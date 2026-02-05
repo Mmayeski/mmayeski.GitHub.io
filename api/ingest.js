@@ -34,16 +34,16 @@ const RSS_FEEDS = [
   { url: 'https://variety.com/feed/', categories: ['entertainment'], source: 'Variety' },
 ];
 
-// Category positions for clustering (center points)
+// Category positions for clustering (center points) - spaced to avoid overlap
 const CATEGORY_CENTERS = {
-  technology: { x: -600, y: -400 },
-  science: { x: 0, y: -500 },
-  business: { x: 600, y: -400 },
-  politics: { x: -500, y: 200 },
+  technology: { x: -800, y: -800 },
+  science: { x: 800, y: -800 },
+  business: { x: -800, y: 0 },
   world: { x: 0, y: 0 },
-  health: { x: 500, y: 200 },
-  sports: { x: -400, y: 500 },
-  entertainment: { x: 400, y: 500 },
+  politics: { x: 800, y: 0 },
+  health: { x: -800, y: 800 },
+  sports: { x: 0, y: 800 },
+  entertainment: { x: 800, y: 800 },
 };
 
 export default async function handler(req, res) {
@@ -52,10 +52,10 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const authHeader = req.headers.authorization;
+  const ingestKey = req.headers['x-ingest-key'];
   const expectedKey = process.env.INGEST_SECRET_KEY;
 
-  if (expectedKey && authHeader !== `Bearer ${expectedKey}`) {
+  if (expectedKey && ingestKey !== expectedKey) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
@@ -207,7 +207,7 @@ function calculatePositions(articles) {
     categoryGroups[primaryCat].push(article);
   });
 
-  // Assign positions within each category cluster
+  // Assign positions within each category cluster - clean grid, no jitter
   const cardWidth = 340;
   const cardHeight = 240;
   const gap = 20;
@@ -216,20 +216,20 @@ function calculatePositions(articles) {
 
   Object.entries(categoryGroups).forEach(([category, catArticles]) => {
     const center = CATEGORY_CENTERS[category] || { x: 0, y: 0 };
-    const cols = Math.ceil(Math.sqrt(catArticles.length));
+    const cols = Math.min(4, Math.ceil(Math.sqrt(catArticles.length))); // Max 4 columns per category
 
     catArticles.forEach((article, i) => {
       const col = i % cols;
       const row = Math.floor(i / cols);
 
-      // Add some randomness to avoid perfect grid
-      const jitterX = (Math.random() - 0.5) * 40;
-      const jitterY = (Math.random() - 0.5) * 40;
+      // Clean grid positioning - center the grid around the category center
+      const gridOffsetX = (col - (cols - 1) / 2) * (cardWidth + gap);
+      const gridOffsetY = row * (cardHeight + gap);
 
       positionedArticles.push({
         ...article,
-        grid_x: center.x + (col - cols/2) * (cardWidth + gap) + jitterX,
-        grid_y: center.y + row * (cardHeight + gap) + jitterY
+        grid_x: center.x + gridOffsetX,
+        grid_y: center.y + gridOffsetY
       });
     });
   });
