@@ -50,12 +50,13 @@
       transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
       text-decoration: none;
       color: inherit;
+      --card-hue: 260;
     }
 
     .card:hover {
-      background: rgba(255, 255, 255, 0.12);
-      border-color: rgba(255, 255, 255, 0.25);
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      background: hsla(var(--card-hue), 40%, 50%, 0.15);
+      border-color: hsla(var(--card-hue), 50%, 60%, 0.4);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 30px hsla(var(--card-hue), 50%, 50%, 0.2);
     }
 
     .card-warp {
@@ -688,13 +689,15 @@
       <button id="fetch-btn">Load News</button>
     </div>
     <div id="category-bar">
-      <button data-cat="general" class="active">General</button>
+      <button data-cat="general" class="active">All</button>
       <button data-cat="technology">Tech</button>
       <button data-cat="science">Science</button>
       <button data-cat="business">Business</button>
+      <button data-cat="politics">Politics</button>
       <button data-cat="health">Health</button>
       <button data-cat="sports">Sports</button>
       <button data-cat="entertainment">Entertainment</button>
+      <button data-cat="world">World</button>
     </div>
   </div>
 
@@ -749,6 +752,26 @@
 
     const MIN_SCALE = 0.3;
     const MAX_SCALE = 3;
+
+    // Category to HSL hue mapping
+    const CATEGORY_HUES = {
+      technology: 140,   // Green
+      science: 180,      // Cyan
+      business: 220,     // Blue
+      politics: 270,     // Purple
+      health: 330,       // Pink
+      sports: 30,        // Orange
+      entertainment: 50, // Yellow
+      world: 160,        // Teal
+      general: 260       // Default purple-ish
+    };
+
+    function getCategoryHue(categories) {
+      if (!categories || categories.length === 0) return CATEGORY_HUES.general;
+      // Use primary category (first one)
+      const primary = categories[0].toLowerCase();
+      return CATEGORY_HUES[primary] || CATEGORY_HUES.general;
+    }
 
     // ── Transform ──
 
@@ -944,11 +967,12 @@
       else expScoreCircle.style.opacity = '1';
     }
 
-    function openExpandedView(article, cardElement) {
-      const sourceName = article.source?.name || '';
+    async function openExpandedView(article, cardElement) {
+      const sourceName = article.source?.name || article.source || '';
       const title = article.title || '';
-      const dateStr = article.publishedAt
-        ? new Date(article.publishedAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+      const dateValue = article.publishedAt || article.published_at;
+      const dateStr = dateValue
+        ? new Date(dateValue).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
         : '';
 
       // Populate expanded content (left panel visible during animation)
@@ -957,10 +981,40 @@
       expDate.textContent = dateStr;
       expLink.href = article.url || '#';
 
-      // Look up claims for this article
-      const articleData = claimsData?.articles?.[article.url];
-      if (articleData && articleData.claims) {
-        renderClaimsInCard(articleData.claims, articleData.avg_score);
+      // Try to fetch claims from API first, then fall back to static data
+      let claims = null;
+      let avgScore = null;
+
+      if (article.id) {
+        try {
+          const res = await fetch(`/api/claims?article_id=${article.id}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.claims && data.claims.length > 0) {
+              claims = data.claims.map(c => ({
+                text: c.claim_text,
+                score: c.score,
+                reasoning: c.reasoning
+              }));
+              avgScore = claims.reduce((sum, c) => sum + (c.score || 0), 0) / claims.length;
+            }
+          }
+        } catch (err) {
+          console.log('Claims API not available:', err.message);
+        }
+      }
+
+      // Fall back to static claims data
+      if (!claims) {
+        const articleData = claimsData?.articles?.[article.url];
+        if (articleData && articleData.claims) {
+          claims = articleData.claims;
+          avgScore = articleData.avg_score;
+        }
+      }
+
+      if (claims) {
+        renderClaimsInCard(claims, avgScore);
       } else {
         renderClaimsInCard(fallbackClaims, null);
       }
@@ -1081,42 +1135,66 @@
         categoryBtns.forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         selectedCategory = btn.dataset.cat;
+        loadFromDatabase();
       });
     });
 
     // ── Sample articles (demo mode) ──
 
     const sampleArticles = [
-      { source: { name: 'Reuters' }, title: 'Global Markets Rally as Trade Tensions Ease Between Major Economies', url: 'https://example.com/article/1', publishedAt: '2026-02-03T10:00:00Z' },
-      { source: { name: 'Associated Press' }, title: 'NASA Confirms New Telescope Captures High-Resolution Images of Distant Exoplanets', url: 'https://example.com/article/2', publishedAt: '2026-02-03T09:30:00Z' },
-      { source: { name: 'The Washington Post' }, title: 'Senate Committee Advances Bipartisan Infrastructure Bill After Marathon Debate', url: 'https://example.com/article/3', publishedAt: '2026-02-02T22:15:00Z' },
-      { source: { name: 'BBC News' }, title: 'European Union Announces Sweeping New Regulations on Artificial Intelligence Development', url: 'https://example.com/article/4', publishedAt: '2026-02-02T18:00:00Z' },
-      { source: { name: 'TechCrunch' }, title: 'Startup Raises $200M to Build Next-Generation Quantum Computing Chips', url: 'https://example.com/article/5', publishedAt: '2026-02-02T15:45:00Z' },
-      { source: { name: 'ESPN' }, title: 'Underdog Team Stuns Champions in Overtime Thriller at Sold-Out Arena', url: 'https://example.com/article/6', publishedAt: '2026-02-02T12:00:00Z' },
-      { source: { name: 'The New York Times' }, title: 'Supreme Court to Hear Landmark Case on Digital Privacy Rights This Spring', url: 'https://example.com/article/7', publishedAt: '2026-02-01T20:30:00Z' },
-      { source: { name: 'Nature' }, title: 'Researchers Discover New Antibiotic Compound Effective Against Drug-Resistant Bacteria', url: 'https://example.com/article/8', publishedAt: '2026-02-01T16:00:00Z' },
-      { source: { name: 'Bloomberg' }, title: 'Oil Prices Surge After OPEC Announces Unexpected Production Cuts for Q2', url: 'https://example.com/article/9', publishedAt: '2026-02-01T14:20:00Z' },
-      { source: { name: 'The Guardian' }, title: 'Climate Scientists Warn Tipping Points May Be Closer Than Previously Estimated', url: 'https://example.com/article/10', publishedAt: '2026-02-01T11:00:00Z' },
-      { source: { name: 'Wired' }, title: 'Inside the Race to Build a Commercially Viable Fusion Reactor by 2030', url: 'https://example.com/article/11', publishedAt: '2026-01-31T19:00:00Z' },
-      { source: { name: 'CNBC' }, title: 'Federal Reserve Signals Potential Rate Adjustments Amid Mixed Economic Data', url: 'https://example.com/article/12', publishedAt: '2026-01-31T17:30:00Z' },
-      { source: { name: 'Al Jazeera' }, title: 'Peace Negotiations Resume in Geneva as Ceasefire Holds for Third Consecutive Week', url: 'https://example.com/article/13', publishedAt: '2026-01-31T13:00:00Z' },
-      { source: { name: 'Ars Technica' }, title: 'Major Browser Vendors Agree on New Standard for Password-Free Authentication', url: 'https://example.com/article/14', publishedAt: '2026-01-31T10:45:00Z' },
-      { source: { name: 'NPR' }, title: 'National Archives Releases Thousands of Previously Classified Cold War Documents', url: 'https://example.com/article/15', publishedAt: '2026-01-30T21:00:00Z' },
-      { source: { name: 'The Economist' }, title: 'How Shifting Demographics Are Reshaping Labor Markets Across Developed Nations', url: 'https://example.com/article/16', publishedAt: '2026-01-30T08:00:00Z' },
+      { source: { name: 'Reuters' }, title: 'Global Markets Rally as Trade Tensions Ease Between Major Economies', url: 'https://example.com/article/1', publishedAt: '2026-02-03T10:00:00Z', categories: ['business'] },
+      { source: { name: 'Associated Press' }, title: 'NASA Confirms New Telescope Captures High-Resolution Images of Distant Exoplanets', url: 'https://example.com/article/2', publishedAt: '2026-02-03T09:30:00Z', categories: ['science'] },
+      { source: { name: 'The Washington Post' }, title: 'Senate Committee Advances Bipartisan Infrastructure Bill After Marathon Debate', url: 'https://example.com/article/3', publishedAt: '2026-02-02T22:15:00Z', categories: ['politics'] },
+      { source: { name: 'BBC News' }, title: 'European Union Announces Sweeping New Regulations on Artificial Intelligence Development', url: 'https://example.com/article/4', publishedAt: '2026-02-02T18:00:00Z', categories: ['technology', 'politics'] },
+      { source: { name: 'TechCrunch' }, title: 'Startup Raises $200M to Build Next-Generation Quantum Computing Chips', url: 'https://example.com/article/5', publishedAt: '2026-02-02T15:45:00Z', categories: ['technology'] },
+      { source: { name: 'ESPN' }, title: 'Underdog Team Stuns Champions in Overtime Thriller at Sold-Out Arena', url: 'https://example.com/article/6', publishedAt: '2026-02-02T12:00:00Z', categories: ['sports'] },
+      { source: { name: 'The New York Times' }, title: 'Supreme Court to Hear Landmark Case on Digital Privacy Rights This Spring', url: 'https://example.com/article/7', publishedAt: '2026-02-01T20:30:00Z', categories: ['politics'] },
+      { source: { name: 'Nature' }, title: 'Researchers Discover New Antibiotic Compound Effective Against Drug-Resistant Bacteria', url: 'https://example.com/article/8', publishedAt: '2026-02-01T16:00:00Z', categories: ['science', 'health'] },
+      { source: { name: 'Bloomberg' }, title: 'Oil Prices Surge After OPEC Announces Unexpected Production Cuts for Q2', url: 'https://example.com/article/9', publishedAt: '2026-02-01T14:20:00Z', categories: ['business'] },
+      { source: { name: 'The Guardian' }, title: 'Climate Scientists Warn Tipping Points May Be Closer Than Previously Estimated', url: 'https://example.com/article/10', publishedAt: '2026-02-01T11:00:00Z', categories: ['science', 'world'] },
+      { source: { name: 'Wired' }, title: 'Inside the Race to Build a Commercially Viable Fusion Reactor by 2030', url: 'https://example.com/article/11', publishedAt: '2026-01-31T19:00:00Z', categories: ['technology', 'science'] },
+      { source: { name: 'CNBC' }, title: 'Federal Reserve Signals Potential Rate Adjustments Amid Mixed Economic Data', url: 'https://example.com/article/12', publishedAt: '2026-01-31T17:30:00Z', categories: ['business'] },
+      { source: { name: 'Al Jazeera' }, title: 'Peace Negotiations Resume in Geneva as Ceasefire Holds for Third Consecutive Week', url: 'https://example.com/article/13', publishedAt: '2026-01-31T13:00:00Z', categories: ['world'] },
+      { source: { name: 'Ars Technica' }, title: 'Major Browser Vendors Agree on New Standard for Password-Free Authentication', url: 'https://example.com/article/14', publishedAt: '2026-01-31T10:45:00Z', categories: ['technology'] },
+      { source: { name: 'NPR' }, title: 'National Archives Releases Thousands of Previously Classified Cold War Documents', url: 'https://example.com/article/15', publishedAt: '2026-01-30T21:00:00Z', categories: ['world', 'politics'] },
+      { source: { name: 'The Economist' }, title: 'How Shifting Demographics Are Reshaping Labor Markets Across Developed Nations', url: 'https://example.com/article/16', publishedAt: '2026-01-30T08:00:00Z', categories: ['business', 'world'] },
     ];
 
     // ── Fetch & render ──
 
-    // Load sample data on startup
+    // Load articles on startup - try API first, fall back to sample data
     updatePastelLight();
-    renderGrid(sampleArticles);
+    loadFromDatabase();
 
     fetchBtn.addEventListener('click', loadArticles);
     apiKeyInput.addEventListener('keydown', e => { if (e.key === 'Enter') loadArticles(); });
 
+    async function loadFromDatabase() {
+      loading.classList.add('visible');
+      try {
+        const categoryParam = selectedCategory !== 'general' ? `?category=${selectedCategory}` : '';
+        const res = await fetch(`/api/articles${categoryParam}`);
+        if (!res.ok) throw new Error('API not available');
+        const data = await res.json();
+        if (data.articles && data.articles.length > 0) {
+          renderGrid(data.articles, true);
+        } else {
+          // No articles in database, use sample data
+          renderGrid(sampleArticles, false);
+        }
+      } catch (err) {
+        console.log('Using sample data:', err.message);
+        renderGrid(sampleArticles, false);
+      }
+      loading.classList.remove('visible');
+    }
+
     async function loadArticles() {
       const key = apiKeyInput.value.trim();
-      if (!key) { renderGrid(sampleArticles); return; }
+      if (!key) {
+        loadFromDatabase();
+        return;
+      }
 
       loading.classList.add('visible');
       viewport.innerHTML = '';
@@ -1134,7 +1212,7 @@
         }
 
         const articles = data.articles.filter(a => a.title && a.title !== '[Removed]');
-        renderGrid(articles);
+        renderGrid(articles, false);
       } catch (err) {
         alert('Network error: ' + err.message);
       }
@@ -1142,13 +1220,15 @@
       loading.classList.remove('visible');
     }
 
-    function renderGrid(articles) {
+    function renderGrid(articles, useDbPositions = false) {
+      viewport.innerHTML = '';
+
       const cols = Math.ceil(Math.sqrt(articles.length));
       const cardW = 340;
       const cardH = 240;
       const gap = 20;
 
-      // Center grid around viewport center
+      // Center grid around viewport center (for non-database articles)
       const totalW = cols * (cardW + gap);
       const totalH = Math.ceil(articles.length / cols) * (cardH + gap);
       const baseX = (window.innerWidth - totalW) / 2;
@@ -1160,25 +1240,40 @@
       applyTransform();
 
       articles.forEach((article, i) => {
-        const col = i % cols;
-        const row = Math.floor(i / cols);
-
         const card = document.createElement('div');
         card.className = 'card';
-        card.style.left = `${baseX + col * (cardW + gap)}px`;
-        card.style.top = `${baseY + row * (cardH + gap)}px`;
+
+        // Use database positions if available, otherwise calculate grid position
+        if (useDbPositions && article.grid_x !== null && article.grid_y !== null) {
+          card.style.left = `${window.innerWidth / 2 + article.grid_x}px`;
+          card.style.top = `${window.innerHeight / 2 + article.grid_y}px`;
+        } else {
+          const col = i % cols;
+          const row = Math.floor(i / cols);
+          card.style.left = `${baseX + col * (cardW + gap)}px`;
+          card.style.top = `${baseY + row * (cardH + gap)}px`;
+        }
+
         card.style.cursor = 'pointer';
         card._articleData = article;
+
+        // Apply category-based coloring
+        const categories = article.categories || [];
+        const hue = getCategoryHue(categories);
+        card.style.setProperty('--card-hue', hue);
+        card.style.borderColor = `hsla(${hue}, 30%, 50%, 0.2)`;
 
         // Warp effect layer
         const warp = document.createElement('div');
         warp.className = 'card-warp';
         card.appendChild(warp);
 
-        if (article.urlToImage) {
+        // Thumbnail image (handle both API formats)
+        const imageUrl = article.urlToImage || article.thumbnail_url;
+        if (imageUrl) {
           const img = document.createElement('img');
           img.className = 'card-image';
-          img.src = article.urlToImage;
+          img.src = imageUrl;
           img.alt = '';
           img.loading = 'lazy';
           card.appendChild(img);
@@ -1186,7 +1281,7 @@
 
         const source = document.createElement('div');
         source.className = 'card-source';
-        source.textContent = article.source?.name || '';
+        source.textContent = article.source?.name || article.source || '';
         card.appendChild(source);
 
         const title = document.createElement('div');
@@ -1194,26 +1289,35 @@
         title.textContent = article.title;
         card.appendChild(title);
 
+        // Handle both date formats
+        const dateValue = article.publishedAt || article.published_at;
         const date = document.createElement('div');
         date.className = 'card-date';
-        date.textContent = article.publishedAt
-          ? new Date(article.publishedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+        date.textContent = dateValue
+          ? new Date(dateValue).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
           : '';
         card.appendChild(date);
 
         // Source quality score badge
         const scoreEl = document.createElement('div');
         scoreEl.className = 'card-score';
-        const articleClaims = claimsData?.articles?.[article.url];
-        if (articleClaims?.avg_score) {
-          scoreEl.textContent = articleClaims.avg_score;
+
+        // Check for database avg_score first, then claims data
+        if (article.avg_score) {
+          scoreEl.textContent = article.avg_score.toFixed(1);
         } else {
-          scoreEl.textContent = '?';
-          scoreEl.style.opacity = '0.4';
+          const articleClaims = claimsData?.articles?.[article.url];
+          if (articleClaims?.avg_score) {
+            scoreEl.textContent = articleClaims.avg_score;
+          } else {
+            scoreEl.textContent = '?';
+            scoreEl.style.opacity = '0.4';
+          }
         }
+
         const tooltip = document.createElement('div');
         tooltip.className = 'card-score-tooltip';
-        tooltip.textContent = articleClaims
+        tooltip.textContent = article.avg_score || claimsData?.articles?.[article.url]
           ? "This scale measures the article's overall quality of sourcing."
           : "This article has not been analyzed yet.";
         scoreEl.appendChild(tooltip);
