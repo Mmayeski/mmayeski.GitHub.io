@@ -1220,38 +1220,104 @@
       loading.classList.remove('visible');
     }
 
+    // Compute a packed grid layout grouping articles by category
+    function computePackedGrid(articles, cardW, cardH, gap) {
+      const categoryOrder = ['technology', 'science', 'business', 'politics', 'world', 'health', 'sports', 'entertainment', 'general'];
+      const categoryGap = 60;
+      const maxColsPerCat = 4;
+      const metaCols = 3;
+
+      // Group by category, tracking original indices
+      const groups = {};
+      articles.forEach((article, idx) => {
+        const cat = (article.categories && article.categories[0]) || 'general';
+        if (!groups[cat]) groups[cat] = [];
+        groups[cat].push(idx);
+      });
+
+      // Order categories
+      const activeCats = categoryOrder.filter(c => groups[c] && groups[c].length > 0);
+      Object.keys(groups).forEach(c => { if (!activeCats.includes(c)) activeCats.push(c); });
+
+      // Calculate dimensions per category
+      const dims = {};
+      activeCats.forEach(cat => {
+        const count = groups[cat].length;
+        const cols = Math.min(maxColsPerCat, Math.ceil(Math.sqrt(count)));
+        const rows = Math.ceil(count / cols);
+        dims[cat] = { cols, rows, width: cols * (cardW + gap) - gap, height: rows * (cardH + gap) - gap };
+      });
+
+      // Place category blocks in packed meta-grid
+      const positions = new Array(articles.length);
+      let currentY = 0;
+
+      for (let mr = 0; mr < Math.ceil(activeCats.length / metaCols); mr++) {
+        const rowCats = activeCats.slice(mr * metaCols, (mr + 1) * metaCols);
+        const maxH = Math.max(...rowCats.map(c => dims[c].height));
+        let currentX = 0;
+
+        rowCats.forEach(cat => {
+          const dim = dims[cat];
+          groups[cat].forEach((origIdx, i) => {
+            const col = i % dim.cols;
+            const row = Math.floor(i / dim.cols);
+            positions[origIdx] = {
+              x: currentX + col * (cardW + gap),
+              y: currentY + row * (cardH + gap)
+            };
+          });
+          currentX += dim.width + categoryGap;
+        });
+
+        currentY += maxH + categoryGap;
+      }
+
+      // Center around (0, 0)
+      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+      positions.forEach(p => {
+        if (!p) return;
+        minX = Math.min(minX, p.x);
+        maxX = Math.max(maxX, p.x + cardW);
+        minY = Math.min(minY, p.y);
+        maxY = Math.max(maxY, p.y + cardH);
+      });
+      const cx = (minX + maxX) / 2;
+      const cy = (minY + maxY) / 2;
+      positions.forEach(p => { if (p) { p.x -= cx; p.y -= cy; } });
+
+      return positions;
+    }
+
     function renderGrid(articles, useDbPositions = false) {
       viewport.innerHTML = '';
 
-      const cols = Math.ceil(Math.sqrt(articles.length));
       const cardW = 340;
       const cardH = 240;
       const gap = 20;
-
-      // Center grid around viewport center (for non-database articles)
-      const totalW = cols * (cardW + gap);
-      const totalH = Math.ceil(articles.length / cols) * (cardH + gap);
-      const baseX = (window.innerWidth - totalW) / 2;
-      const baseY = (window.innerHeight - totalH) / 2;
 
       // Reset pan to center
       offsetX = 0;
       offsetY = 0;
       applyTransform();
 
+      // Calculate positions for articles (used when DB positions unavailable)
+      let computedPositions = null;
+      if (!useDbPositions) {
+        computedPositions = computePackedGrid(articles, cardW, cardH, gap);
+      }
+
       articles.forEach((article, i) => {
         const card = document.createElement('div');
         card.className = 'card';
 
-        // Use database positions if available, otherwise calculate grid position
+        // Use database positions if available, otherwise use computed packed grid
         if (useDbPositions && article.grid_x !== null && article.grid_y !== null) {
           card.style.left = `${window.innerWidth / 2 + article.grid_x}px`;
           card.style.top = `${window.innerHeight / 2 + article.grid_y}px`;
-        } else {
-          const col = i % cols;
-          const row = Math.floor(i / cols);
-          card.style.left = `${baseX + col * (cardW + gap)}px`;
-          card.style.top = `${baseY + row * (cardH + gap)}px`;
+        } else if (computedPositions) {
+          card.style.left = `${window.innerWidth / 2 + computedPositions[i].x}px`;
+          card.style.top = `${window.innerHeight / 2 + computedPositions[i].y}px`;
         }
 
         card.style.cursor = 'pointer';
