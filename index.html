@@ -51,6 +51,7 @@
       text-decoration: none;
       color: inherit;
       --card-hue: 260;
+      box-shadow: 0 0 35px 10px hsla(var(--card-hue), 40%, 55%, 0.06);
     }
 
     .card:hover {
@@ -1177,14 +1178,14 @@
         if (!res.ok) throw new Error('API not available');
         const data = await res.json();
         if (data.articles && data.articles.length > 0) {
-          renderGrid(data.articles, true);
+          renderGrid(data.articles);
         } else {
           // No articles in database, use sample data
-          renderGrid(sampleArticles, false);
+          renderGrid(sampleArticles);
         }
       } catch (err) {
         console.log('Using sample data:', err.message);
-        renderGrid(sampleArticles, false);
+        renderGrid(sampleArticles);
       }
       loading.classList.remove('visible');
     }
@@ -1212,7 +1213,7 @@
         }
 
         const articles = data.articles.filter(a => a.title && a.title !== '[Removed]');
-        renderGrid(articles, false);
+        renderGrid(articles);
       } catch (err) {
         alert('Network error: ' + err.message);
       }
@@ -1220,76 +1221,46 @@
       loading.classList.remove('visible');
     }
 
-    // Compute a packed grid layout grouping articles by category
-    function computePackedGrid(articles, cardW, cardH, gap) {
-      const categoryOrder = ['technology', 'science', 'business', 'politics', 'world', 'health', 'sports', 'entertainment', 'general'];
-      const categoryGap = 60;
-      const maxColsPerCat = 4;
-      const metaCols = 3;
+    // Compute recency-centered grid: newest articles at center, radiating outward
+    function computeRecencyGrid(articles, cardW, cardH, gap) {
+      const count = articles.length;
+      if (count === 0) return [];
 
-      // Group by category, tracking original indices
-      const groups = {};
-      articles.forEach((article, idx) => {
-        const cat = (article.categories && article.categories[0]) || 'general';
-        if (!groups[cat]) groups[cat] = [];
-        groups[cat].push(idx);
-      });
+      // Sort by date (newest first)
+      const indexed = articles.map((a, i) => ({ i, date: new Date(a.publishedAt || a.published_at || 0).getTime() }));
+      indexed.sort((a, b) => b.date - a.date);
 
-      // Order categories
-      const activeCats = categoryOrder.filter(c => groups[c] && groups[c].length > 0);
-      Object.keys(groups).forEach(c => { if (!activeCats.includes(c)) activeCats.push(c); });
+      // Uniform rectangular grid
+      const cols = Math.ceil(Math.sqrt(count));
+      const rows = Math.ceil(count / cols);
+      const centerCol = (cols - 1) / 2;
+      const centerRow = (rows - 1) / 2;
 
-      // Calculate dimensions per category
-      const dims = {};
-      activeCats.forEach(cat => {
-        const count = groups[cat].length;
-        const cols = Math.min(maxColsPerCat, Math.ceil(Math.sqrt(count)));
-        const rows = Math.ceil(count / cols);
-        dims[cat] = { cols, rows, width: cols * (cardW + gap) - gap, height: rows * (cardH + gap) - gap };
-      });
-
-      // Place category blocks in packed meta-grid
-      const positions = new Array(articles.length);
-      let currentY = 0;
-
-      for (let mr = 0; mr < Math.ceil(activeCats.length / metaCols); mr++) {
-        const rowCats = activeCats.slice(mr * metaCols, (mr + 1) * metaCols);
-        const maxH = Math.max(...rowCats.map(c => dims[c].height));
-        let currentX = 0;
-
-        rowCats.forEach(cat => {
-          const dim = dims[cat];
-          groups[cat].forEach((origIdx, i) => {
-            const col = i % dim.cols;
-            const row = Math.floor(i / dim.cols);
-            positions[origIdx] = {
-              x: currentX + col * (cardW + gap),
-              y: currentY + row * (cardH + gap)
-            };
-          });
-          currentX += dim.width + categoryGap;
-        });
-
-        currentY += maxH + categoryGap;
+      // Generate all grid slots sorted by distance from center
+      const slots = [];
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          const dx = (c - centerCol) * (cardW + gap);
+          const dy = (r - centerRow) * (cardH + gap);
+          slots.push({ c, r, dist: Math.sqrt(dx * dx + dy * dy) });
+        }
       }
+      slots.sort((a, b) => a.dist - b.dist || a.r - b.r || a.c - b.c);
 
-      // Center around (0, 0)
-      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-      positions.forEach(p => {
-        if (!p) return;
-        minX = Math.min(minX, p.x);
-        maxX = Math.max(maxX, p.x + cardW);
-        minY = Math.min(minY, p.y);
-        maxY = Math.max(maxY, p.y + cardH);
+      // Map: original article index → position
+      const positions = new Array(count);
+      indexed.forEach((item, rank) => {
+        const slot = slots[rank];
+        positions[item.i] = {
+          x: (slot.c - centerCol) * (cardW + gap),
+          y: (slot.r - centerRow) * (cardH + gap)
+        };
       });
-      const cx = (minX + maxX) / 2;
-      const cy = (minY + maxY) / 2;
-      positions.forEach(p => { if (p) { p.x -= cx; p.y -= cy; } });
 
       return positions;
     }
 
-    function renderGrid(articles, useDbPositions = false) {
+    function renderGrid(articles) {
       viewport.innerHTML = '';
 
       const cardW = 340;
@@ -1301,23 +1272,17 @@
       offsetY = 0;
       applyTransform();
 
-      // Calculate positions for articles (used when DB positions unavailable)
-      let computedPositions = null;
-      if (!useDbPositions) {
-        computedPositions = computePackedGrid(articles, cardW, cardH, gap);
-      }
+      // Always compute positions client-side (recency-centered)
+      const positions = computeRecencyGrid(articles, cardW, cardH, gap);
 
       articles.forEach((article, i) => {
         const card = document.createElement('div');
         card.className = 'card';
 
-        // Use database positions if available, otherwise use computed packed grid
-        if (useDbPositions && article.grid_x !== null && article.grid_y !== null) {
-          card.style.left = `${window.innerWidth / 2 + article.grid_x}px`;
-          card.style.top = `${window.innerHeight / 2 + article.grid_y}px`;
-        } else if (computedPositions) {
-          card.style.left = `${window.innerWidth / 2 + computedPositions[i].x}px`;
-          card.style.top = `${window.innerHeight / 2 + computedPositions[i].y}px`;
+        const pos = positions[i];
+        if (pos) {
+          card.style.left = `${window.innerWidth / 2 + pos.x}px`;
+          card.style.top = `${window.innerHeight / 2 + pos.y}px`;
         }
 
         card.style.cursor = 'pointer';
