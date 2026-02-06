@@ -34,18 +34,12 @@ const RSS_FEEDS = [
   { url: 'https://variety.com/feed/', categories: ['entertainment'], source: 'Variety' },
 ];
 
-// Category positions for clustering (center points) - spaced wider to avoid overlap
-// Each cluster can be ~1440px wide (4 cols × 340px + gaps), so use 1800px spacing
-const CATEGORY_CENTERS = {
-  technology: { x: -1800, y: -1200 },
-  science: { x: 0, y: -1200 },
-  business: { x: 1800, y: -1200 },
-  politics: { x: -1800, y: 600 },
-  world: { x: 0, y: 600 },
-  health: { x: 1800, y: 600 },
-  sports: { x: -900, y: 2400 },
-  entertainment: { x: 900, y: 2400 },
-};
+// Category display order for the grid layout (arranged in rows of 3)
+const CATEGORY_ORDER = [
+  'technology', 'science', 'business',
+  'politics', 'world', 'health',
+  'sports', 'entertainment'
+];
 
 export default async function handler(req, res) {
   // Only allow POST with a secret key for security
@@ -204,32 +198,88 @@ function calculatePositions(articles) {
     categoryGroups[primaryCat].push(article);
   });
 
-  // Assign positions within each category cluster - clean grid, no jitter
   const cardWidth = 340;
   const cardHeight = 240;
   const gap = 20;
+  const categoryGap = 60; // Gap between category blocks
+  const maxColsPerCategory = 4;
 
-  const positionedArticles = [];
-
-  Object.entries(categoryGroups).forEach(([category, catArticles]) => {
-    const center = CATEGORY_CENTERS[category] || { x: 0, y: 0 };
-    const cols = Math.min(4, Math.ceil(Math.sqrt(catArticles.length))); // Max 4 columns per category
-
-    catArticles.forEach((article, i) => {
-      const col = i % cols;
-      const row = Math.floor(i / cols);
-
-      // Clean grid positioning - center the grid around the category center
-      const gridOffsetX = (col - (cols - 1) / 2) * (cardWidth + gap);
-      const gridOffsetY = row * (cardHeight + gap);
-
-      positionedArticles.push({
-        ...article,
-        grid_x: center.x + gridOffsetX,
-        grid_y: center.y + gridOffsetY
-      });
-    });
+  // Only include categories that have articles, in display order
+  const activeCategories = CATEGORY_ORDER.filter(
+    cat => categoryGroups[cat] && categoryGroups[cat].length > 0
+  );
+  // Include any categories not in the predefined order
+  Object.keys(categoryGroups).forEach(cat => {
+    if (!activeCategories.includes(cat)) activeCategories.push(cat);
   });
+
+  // Calculate the grid dimensions each category block needs
+  const categoryDims = {};
+  activeCategories.forEach(cat => {
+    const count = categoryGroups[cat].length;
+    const cols = Math.min(maxColsPerCategory, Math.ceil(Math.sqrt(count)));
+    const rows = Math.ceil(count / cols);
+    categoryDims[cat] = {
+      cols,
+      rows,
+      width: cols * (cardWidth + gap) - gap,
+      height: rows * (cardHeight + gap) - gap
+    };
+  });
+
+  // Arrange category blocks in a packed meta-grid (3 categories per row)
+  const metaCols = 3;
+  const positionedArticles = [];
+  let currentY = 0;
+
+  for (let metaRow = 0; metaRow < Math.ceil(activeCategories.length / metaCols); metaRow++) {
+    const rowCategories = activeCategories.slice(metaRow * metaCols, (metaRow + 1) * metaCols);
+
+    // This meta-row is exactly as tall as its tallest category block
+    const maxHeight = Math.max(...rowCategories.map(cat => categoryDims[cat].height));
+
+    // Find the widest possible column width for uniform spacing
+    let currentX = 0;
+
+    rowCategories.forEach(cat => {
+      const dim = categoryDims[cat];
+      const catArticles = categoryGroups[cat];
+
+      catArticles.forEach((article, i) => {
+        const col = i % dim.cols;
+        const row = Math.floor(i / dim.cols);
+
+        positionedArticles.push({
+          ...article,
+          grid_x: currentX + col * (cardWidth + gap),
+          grid_y: currentY + row * (cardHeight + gap)
+        });
+      });
+
+      currentX += dim.width + categoryGap;
+    });
+
+    currentY += maxHeight + categoryGap;
+  }
+
+  // Center the entire grid around (0, 0)
+  if (positionedArticles.length > 0) {
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    positionedArticles.forEach(a => {
+      minX = Math.min(minX, a.grid_x);
+      maxX = Math.max(maxX, a.grid_x + cardWidth);
+      minY = Math.min(minY, a.grid_y);
+      maxY = Math.max(maxY, a.grid_y + cardHeight);
+    });
+
+    const centerOffsetX = (minX + maxX) / 2;
+    const centerOffsetY = (minY + maxY) / 2;
+
+    positionedArticles.forEach(a => {
+      a.grid_x -= centerOffsetX;
+      a.grid_y -= centerOffsetY;
+    });
+  }
 
   return positionedArticles;
 }
