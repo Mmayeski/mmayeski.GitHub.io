@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin - Ingest Articles</title>
+  <title>Admin - News Grid</title>
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -13,13 +13,20 @@
       color: #e0e0e0;
       min-height: 100vh;
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       justify-content: center;
-      padding: 20px;
+      padding: 40px 20px;
+    }
+
+    .page {
+      max-width: 500px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
     }
 
     .container {
-      max-width: 400px;
       width: 100%;
       background: rgba(255, 255, 255, 0.06);
       backdrop-filter: blur(12px);
@@ -35,10 +42,16 @@
       color: #e0e0e0;
     }
 
-    p {
+    h2 {
+      font-size: 17px;
+      margin-bottom: 6px;
+      color: #e0e0e0;
+    }
+
+    p.desc {
       font-size: 13px;
       color: #888;
-      margin-bottom: 24px;
+      margin-bottom: 20px;
       line-height: 1.5;
     }
 
@@ -51,7 +64,7 @@
       margin-bottom: 8px;
     }
 
-    input {
+    input, textarea {
       width: 100%;
       padding: 12px 16px;
       border-radius: 8px;
@@ -59,10 +72,19 @@
       background: rgba(0, 0, 0, 0.4);
       color: #e0e0e0;
       font-size: 14px;
-      margin-bottom: 20px;
+      font-family: inherit;
+      margin-bottom: 16px;
     }
 
-    input:focus {
+    textarea {
+      min-height: 160px;
+      resize: vertical;
+      font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    input:focus, textarea:focus {
       outline: none;
       border-color: rgba(100, 100, 220, 0.5);
     }
@@ -89,8 +111,8 @@
       cursor: not-allowed;
     }
 
-    #status {
-      margin-top: 20px;
+    .status {
+      margin-top: 16px;
       padding: 16px;
       border-radius: 8px;
       font-size: 13px;
@@ -98,31 +120,74 @@
       display: none;
     }
 
-    #status.success {
+    .status.success {
       display: block;
       background: rgba(100, 200, 100, 0.15);
       border: 1px solid rgba(100, 200, 100, 0.3);
       color: #a0e0a0;
     }
 
-    #status.error {
+    .status.error {
       display: block;
       background: rgba(200, 100, 100, 0.15);
       border: 1px solid rgba(200, 100, 100, 0.3);
       color: #e0a0a0;
     }
 
-    #status.loading {
+    .status.loading {
       display: block;
       background: rgba(100, 100, 200, 0.15);
       border: 1px solid rgba(100, 100, 200, 0.3);
       color: #a0a0e0;
     }
 
+    .divider {
+      height: 1px;
+      background: rgba(255, 255, 255, 0.08);
+      margin: 8px 0;
+    }
+
+    .prompt-box {
+      background: rgba(40, 35, 55, 0.5);
+      border: 1px solid rgba(150, 150, 255, 0.2);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
+    .prompt-box h4 {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #666;
+      margin-bottom: 10px;
+    }
+
+    .prompt-text {
+      font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+      font-size: 11px;
+      line-height: 1.6;
+      color: #aaa;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .copy-btn {
+      width: auto;
+      padding: 6px 14px;
+      font-size: 12px;
+      margin-top: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .copy-btn:hover {
+      background: rgba(255, 255, 255, 0.15);
+    }
+
     .back-link {
       display: block;
       text-align: center;
-      margin-top: 20px;
       color: #888;
       font-size: 13px;
       text-decoration: none;
@@ -134,36 +199,107 @@
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Ingest Articles</h1>
-    <p>Fetch articles from RSS feeds and store them in the database with category-based positioning.</p>
+  <div class="page">
 
-    <label for="secret">Ingest Secret Key</label>
-    <input type="password" id="secret" placeholder="Enter your INGEST_SECRET_KEY" />
+    <!-- Tool 1: RSS Ingestion -->
+    <div class="container">
+      <h2>Ingest Articles</h2>
+      <p class="desc">Fetch articles from RSS feeds and store them in the database.</p>
 
-    <button id="ingest-btn">Ingest Articles</button>
+      <label for="secret">Ingest Secret Key</label>
+      <input type="password" id="secret" placeholder="Enter your INGEST_SECRET_KEY" />
 
-    <div id="status"></div>
+      <button id="ingest-btn">Ingest Articles</button>
+      <div id="ingest-status" class="status"></div>
+    </div>
+
+    <!-- Tool 2: Claims Upload -->
+    <div class="container">
+      <h2>Upload Source Analysis</h2>
+      <p class="desc">Submit AI-generated claim analysis for an article. Use the prompt below, then paste the output.</p>
+
+      <div class="prompt-box">
+        <h4>AI Prompt (copy and use with any LLM)</h4>
+        <div class="prompt-text" id="prompt-text">You are a source quality analyst. Read the following news article and extract every distinct factual claim. For each claim, assign a credibility score from 1 to 10 using this scale:
+
+1 - Tabloid gossip, no sources cited, pure speculation
+2 - Anonymous rumor, "sources say" with no detail
+3 - Single unnamed source, unverified assertion
+4 - Single named source, but no corroboration
+5 - Multiple unnamed sources agreeing, or one named source with partial evidence
+6 - Named sources with supporting documentation or data
+7 - Multiple named sources with documented evidence
+8 - Official statements from verified authorities, backed by public records
+9 - Sworn testimony, court filings, or peer-reviewed data
+10 - Sworn public statement inside a courtroom, verified judicial record, or reproducible scientific finding
+
+Rules:
+- Extract EVERY distinct factual claim, not opinions or editorializing
+- Score each claim independently based on the evidence presented IN the article
+- If the article attributes a claim to a specific source, evaluate that source's reliability
+- "Reasoning" should be 1-2 sentences explaining what evidence supports (or doesn't support) the claim
+
+Return ONLY valid JSON in this exact format, no other text:
+{
+  "claims": [
+    {
+      "text": "The exact factual claim from the article",
+      "score": 7,
+      "reasoning": "Brief explanation of what evidence supports this score"
+    }
+  ]
+}
+
+ARTICLE:
+[Paste the full article text here]</div>
+        <button class="copy-btn" id="copy-prompt-btn">Copy Prompt</button>
+      </div>
+
+      <div class="divider"></div>
+
+      <label for="claims-secret">Ingest Secret Key</label>
+      <input type="password" id="claims-secret" placeholder="Enter your INGEST_SECRET_KEY" />
+
+      <label for="article-url">Article URL</label>
+      <input type="url" id="article-url" placeholder="https://example.com/article/..." />
+
+      <label for="claims-json">AI Output (JSON)</label>
+      <textarea id="claims-json" placeholder='Paste the AI JSON output here, e.g.:
+{
+  "claims": [
+    {
+      "text": "The specific claim",
+      "score": 7,
+      "reasoning": "Why this score"
+    }
+  ]
+}'></textarea>
+
+      <button id="claims-btn">Submit Analysis</button>
+      <div id="claims-status" class="status"></div>
+    </div>
 
     <a href="/" class="back-link">Back to News Grid</a>
   </div>
 
   <script>
+    // ── Tool 1: RSS Ingestion ──
+
     const secretInput = document.getElementById('secret');
     const ingestBtn = document.getElementById('ingest-btn');
-    const status = document.getElementById('status');
+    const ingestStatus = document.getElementById('ingest-status');
 
     ingestBtn.addEventListener('click', async () => {
       const secret = secretInput.value.trim();
       if (!secret) {
-        status.className = 'error';
-        status.textContent = 'Please enter your ingest secret key.';
+        ingestStatus.className = 'status error';
+        ingestStatus.textContent = 'Please enter your ingest secret key.';
         return;
       }
 
       ingestBtn.disabled = true;
-      status.className = 'loading';
-      status.textContent = 'Fetching and processing RSS feeds...';
+      ingestStatus.className = 'status loading';
+      ingestStatus.textContent = 'Fetching and processing RSS feeds...';
 
       try {
         const res = await fetch('/api/ingest', {
@@ -174,28 +310,143 @@
         const data = await res.json();
 
         if (res.ok && data.inserted !== undefined) {
-          status.className = 'success';
-          status.innerHTML = `
+          ingestStatus.className = 'status success';
+          ingestStatus.innerHTML = `
             <strong>Success!</strong><br>
             Articles processed: ${data.inserted}<br>
             Feeds processed: ${data.feeds_processed || 'N/A'}<br>
             ${data.errors > 0 ? `Errors: ${data.errors}` : 'No errors'}
           `;
         } else {
-          status.className = 'error';
-          status.textContent = data.error || 'Ingestion failed. Check your secret key.';
+          ingestStatus.className = 'status error';
+          ingestStatus.textContent = data.error || 'Ingestion failed. Check your secret key.';
         }
       } catch (err) {
-        status.className = 'error';
-        status.textContent = 'Network error: ' + err.message;
+        ingestStatus.className = 'status error';
+        ingestStatus.textContent = 'Network error: ' + err.message;
       }
 
       ingestBtn.disabled = false;
     });
 
-    // Allow Enter key to trigger ingestion
     secretInput.addEventListener('keydown', e => {
       if (e.key === 'Enter') ingestBtn.click();
+    });
+
+    // ── Tool 2: Claims Upload ──
+
+    const claimsSecretInput = document.getElementById('claims-secret');
+    const articleUrlInput = document.getElementById('article-url');
+    const claimsJsonInput = document.getElementById('claims-json');
+    const claimsBtn = document.getElementById('claims-btn');
+    const claimsStatus = document.getElementById('claims-status');
+    const copyPromptBtn = document.getElementById('copy-prompt-btn');
+
+    copyPromptBtn.addEventListener('click', () => {
+      const text = document.getElementById('prompt-text').textContent;
+      navigator.clipboard.writeText(text).then(() => {
+        copyPromptBtn.textContent = 'Copied!';
+        setTimeout(() => { copyPromptBtn.textContent = 'Copy Prompt'; }, 2000);
+      }).catch(() => {
+        // Fallback for older browsers
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        copyPromptBtn.textContent = 'Copied!';
+        setTimeout(() => { copyPromptBtn.textContent = 'Copy Prompt'; }, 2000);
+      });
+    });
+
+    claimsBtn.addEventListener('click', async () => {
+      const secret = claimsSecretInput.value.trim();
+      const articleUrl = articleUrlInput.value.trim();
+      const jsonText = claimsJsonInput.value.trim();
+
+      if (!secret) {
+        claimsStatus.className = 'status error';
+        claimsStatus.textContent = 'Please enter your ingest secret key.';
+        return;
+      }
+
+      if (!articleUrl) {
+        claimsStatus.className = 'status error';
+        claimsStatus.textContent = 'Please enter the article URL.';
+        return;
+      }
+
+      // Parse and validate JSON
+      let parsed;
+      try {
+        parsed = JSON.parse(jsonText);
+      } catch (e) {
+        claimsStatus.className = 'status error';
+        claimsStatus.textContent = 'Invalid JSON. Make sure you pasted the complete AI output.';
+        return;
+      }
+
+      if (!parsed.claims || !Array.isArray(parsed.claims) || parsed.claims.length === 0) {
+        claimsStatus.className = 'status error';
+        claimsStatus.textContent = 'JSON must contain a "claims" array with at least one claim.';
+        return;
+      }
+
+      // Validate each claim has required fields
+      for (let i = 0; i < parsed.claims.length; i++) {
+        const c = parsed.claims[i];
+        if (!c.text || typeof c.score !== 'number') {
+          claimsStatus.className = 'status error';
+          claimsStatus.textContent = `Claim ${i + 1} is missing "text" or "score". Each claim needs both.`;
+          return;
+        }
+        if (c.score < 1 || c.score > 10) {
+          claimsStatus.className = 'status error';
+          claimsStatus.textContent = `Claim ${i + 1} has score ${c.score}. Scores must be 1-10.`;
+          return;
+        }
+      }
+
+      claimsBtn.disabled = true;
+      claimsStatus.className = 'status loading';
+      claimsStatus.textContent = `Submitting ${parsed.claims.length} claims...`;
+
+      try {
+        const res = await fetch('/api/claims', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-ingest-key': secret
+          },
+          body: JSON.stringify({
+            article_url: articleUrl,
+            claims: parsed.claims
+          })
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          claimsStatus.className = 'status success';
+          claimsStatus.innerHTML = `
+            <strong>Analysis saved!</strong><br>
+            Claims submitted: ${data.claims_count}<br>
+            Average score: ${data.avg_score}/10
+          `;
+          // Clear inputs on success
+          articleUrlInput.value = '';
+          claimsJsonInput.value = '';
+        } else {
+          claimsStatus.className = 'status error';
+          claimsStatus.textContent = data.error || 'Submission failed.';
+        }
+      } catch (err) {
+        claimsStatus.className = 'status error';
+        claimsStatus.textContent = 'Network error: ' + err.message;
+      }
+
+      claimsBtn.disabled = false;
     });
   </script>
 </body>
