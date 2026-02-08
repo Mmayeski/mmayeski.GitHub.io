@@ -491,6 +491,7 @@
       background: rgba(255, 255, 255, 0.04);
       border: 1px solid rgba(255, 255, 255, 0.08);
       border-radius: 10px;
+      transition: box-shadow 0.2s, background 0.2s;
     }
 
     .claim-score {
@@ -505,6 +506,7 @@
       font-size: 18px;
       font-weight: 700;
       color: #e8e0f0;
+      transition: box-shadow 0.2s;
     }
 
     .claim-text {
@@ -1003,11 +1005,46 @@
     const expScoreCircle = expandingCard.querySelector('.avg-score-box .score-circle');
     const expCloseBtn = expandingCard.querySelector('.close-btn');
 
-    // Map claim score (1-10) to hue: 1=orange(30), 10=green(140)
-    function scoreToHue(score) {
-      if (score === null || score === undefined) return 260; // neutral purple
-      const clamped = Math.max(1, Math.min(10, score));
-      return 30 + ((clamped - 1) / 9) * 110; // 30 (orange) → 140 (green)
+    // Map claim score (1-10) to visual style
+    // 8-10: vibrant blue, 3D raised effect
+    // below 8: progressively fades to a ghost outline at 1
+    function getClaimStyle(score) {
+      if (score === null || score === undefined) {
+        return { tier: 'none' };
+      }
+      const s = Math.max(1, Math.min(10, score));
+
+      if (s >= 8) {
+        // High credibility: vibrant blue, 3D raised
+        const intensity = (s - 8) / 2; // 0 at 8, 1 at 10
+        return {
+          tier: 'high',
+          itemBg: `rgba(70, 100, 220, ${0.12 + intensity * 0.06})`,
+          itemBorder: `rgba(100, 130, 255, ${0.30 + intensity * 0.15})`,
+          itemShadow: `0 2px 8px rgba(60, 90, 200, ${0.15 + intensity * 0.10}), inset 0 1px 0 rgba(255, 255, 255, ${0.08 + intensity * 0.04})`,
+          scoreBg: `rgba(70, 100, 220, ${0.45 + intensity * 0.15})`,
+          scoreBorder: `rgba(120, 150, 255, ${0.4 + intensity * 0.2})`,
+          scoreColor: '#fff',
+          textColor: '#e0e0e0',
+          reasonColor: '#999'
+        };
+      }
+
+      // Below 8: fade from visible (7) to ghost (1)
+      // t goes from 1.0 (at score 7) to 0.0 (at score 1)
+      const t = (s - 1) / 6;
+
+      return {
+        tier: 'low',
+        itemBg: `rgba(255, 255, 255, ${0.01 + t * 0.03})`,
+        itemBorder: `rgba(255, 255, 255, ${0.04 + t * 0.06})`,
+        itemShadow: 'none',
+        scoreBg: `rgba(255, 255, 255, ${0.03 + t * 0.05})`,
+        scoreBorder: `rgba(255, 255, 255, ${0.06 + t * 0.09})`,
+        scoreColor: `rgba(200, 200, 210, ${0.3 + t * 0.5})`,
+        textColor: `rgba(200, 200, 210, ${0.35 + t * 0.45})`,
+        reasonColor: `rgba(150, 150, 160, ${0.25 + t * 0.35})`
+      };
     }
 
     function renderClaimsInCard(claims, avgScore) {
@@ -1017,30 +1054,36 @@
         const claimItem = document.createElement('div');
         claimItem.className = 'claim-item';
 
-        const hue = scoreToHue(claim.score);
+        const style = getClaimStyle(claim.score);
 
-        // Tint the claim row based on score
-        if (claim.score !== null) {
-          claimItem.style.background = `hsla(${hue}, 40%, 50%, 0.06)`;
-          claimItem.style.borderColor = `hsla(${hue}, 35%, 50%, 0.15)`;
+        if (style.tier !== 'none') {
+          claimItem.style.background = style.itemBg;
+          claimItem.style.borderColor = style.itemBorder;
+          claimItem.style.boxShadow = style.itemShadow;
         }
 
         const scoreDiv = document.createElement('div');
         scoreDiv.className = 'claim-score';
         scoreDiv.textContent = claim.score !== null ? claim.score : '?';
+
         if (claim.score === null) {
           scoreDiv.style.opacity = '0.4';
         } else {
-          scoreDiv.style.background = `hsla(${hue}, 35%, 45%, 0.35)`;
-          scoreDiv.style.borderColor = `hsla(${hue}, 40%, 55%, 0.3)`;
-          scoreDiv.style.color = `hsla(${hue}, 50%, 85%, 1)`;
+          scoreDiv.style.background = style.scoreBg;
+          scoreDiv.style.borderColor = style.scoreBorder;
+          scoreDiv.style.color = style.scoreColor;
+          if (style.tier === 'high') {
+            scoreDiv.style.boxShadow = `0 2px 6px rgba(60, 90, 200, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.15)`;
+          }
         }
 
         const textDiv = document.createElement('div');
         textDiv.className = 'claim-text';
+        textDiv.style.color = style.textColor || '#ccc';
+        const reasonStyle = style.reasonColor ? `color:${style.reasonColor}` : 'color:#888';
         textDiv.innerHTML = `
           <div>${claim.text}</div>
-          ${claim.reasoning ? `<div style="margin-top:8px;font-size:12px;color:#888;font-style:italic;">${claim.reasoning}</div>` : ''}
+          ${claim.reasoning ? `<div style="margin-top:8px;font-size:12px;${reasonStyle};font-style:italic;">${claim.reasoning}</div>` : ''}
         `;
 
         claimItem.appendChild(scoreDiv);
