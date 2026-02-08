@@ -801,8 +801,8 @@
     document.addEventListener('contextmenu', e => e.preventDefault());
 
     document.addEventListener('mousedown', e => {
-      // Allow clicks on input/button
-      if (e.target.closest('#controls')) return;
+      // Allow clicks on input/button, and don't pan when expanded card is open
+      if (e.target.closest('#controls') || e.target.closest('#expanding-card')) return;
       isPanning = true;
       startX = e.clientX - offsetX;
       startY = e.clientY - offsetY;
@@ -828,7 +828,7 @@
     // ── Mouse wheel zoom ──
 
     document.addEventListener('wheel', e => {
-      if (e.target.closest('#controls')) return;
+      if (e.target.closest('#controls') || e.target.closest('#expanding-card')) return;
       e.preventDefault();
       const zoomFactor = e.deltaY > 0 ? 0.92 : 1.08;
       const newScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, scale * zoomFactor));
@@ -862,7 +862,7 @@
     }
 
     document.addEventListener('touchstart', e => {
-      if (e.target.closest('#controls')) return;
+      if (e.target.closest('#controls') || e.target.closest('#expanding-card')) return;
       if (e.touches.length === 2) {
         pinching = true;
         lastPinchDist = getTouchDist(e);
@@ -876,7 +876,7 @@
     }, { passive: true });
 
     document.addEventListener('touchmove', e => {
-      if (e.target.closest('#controls')) return;
+      if (e.target.closest('#controls') || e.target.closest('#expanding-card')) return;
 
       if (e.touches.length === 2 && pinching) {
         e.preventDefault();
