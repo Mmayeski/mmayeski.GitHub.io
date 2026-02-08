@@ -549,7 +549,8 @@
       flex: 0 0 320px;
       display: flex;
       flex-direction: column;
-      gap: 20px;
+      gap: 16px;
+      overflow-y: auto;
     }
 
     #expanding-card .expanded-thumbnail {
@@ -605,11 +606,67 @@
       font-weight: 500;
       cursor: pointer;
       transition: background 0.2s;
-      margin-top: auto;
     }
 
     #expanding-card .expanded-link:hover {
       background: rgba(80, 80, 180, 0.7);
+    }
+
+    #expanding-card .context-connections {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 16px;
+      min-height: 120px;
+      overflow: hidden;
+    }
+
+    #expanding-card .context-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #666;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+
+    #expanding-card .context-list {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 12px;
+      color: #777;
+      font-size: 13px;
+    }
+
+    #expanding-card .context-input-wrap {
+      flex: 0 0 auto;
+    }
+
+    #expanding-card .context-input {
+      width: 100%;
+      padding: 10px 14px;
+      border-radius: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.05);
+      color: #e0e0e0;
+      font-size: 13px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    #expanding-card .context-input:focus {
+      border-color: rgba(100, 100, 220, 0.4);
+    }
+
+    #expanding-card .context-input::placeholder {
+      color: #555;
     }
 
     #expanding-card .expanded-right {
@@ -720,6 +777,13 @@
           <div class="exp-date"></div>
         </div>
         <a class="expanded-link" target="_blank" rel="noopener noreferrer">Visit Article</a>
+        <div class="context-connections">
+          <h4 class="context-title">Context Connections</h4>
+          <div class="context-list"></div>
+          <div class="context-input-wrap">
+            <input type="text" class="context-input" placeholder="Add a connection..." disabled />
+          </div>
+        </div>
       </div>
       <div class="expanded-right">
         <h3>Source Claims Analysis</h3>
@@ -939,6 +1003,13 @@
     const expScoreCircle = expandingCard.querySelector('.avg-score-box .score-circle');
     const expCloseBtn = expandingCard.querySelector('.close-btn');
 
+    // Map claim score (1-10) to hue: 1=orange(30), 10=green(140)
+    function scoreToHue(score) {
+      if (score === null || score === undefined) return 260; // neutral purple
+      const clamped = Math.max(1, Math.min(10, score));
+      return 30 + ((clamped - 1) / 9) * 110; // 30 (orange) → 140 (green)
+    }
+
     function renderClaimsInCard(claims, avgScore) {
       expClaimsList.innerHTML = '';
 
@@ -946,10 +1017,24 @@
         const claimItem = document.createElement('div');
         claimItem.className = 'claim-item';
 
+        const hue = scoreToHue(claim.score);
+
+        // Tint the claim row based on score
+        if (claim.score !== null) {
+          claimItem.style.background = `hsla(${hue}, 40%, 50%, 0.06)`;
+          claimItem.style.borderColor = `hsla(${hue}, 35%, 50%, 0.15)`;
+        }
+
         const scoreDiv = document.createElement('div');
         scoreDiv.className = 'claim-score';
         scoreDiv.textContent = claim.score !== null ? claim.score : '?';
-        if (claim.score === null) scoreDiv.style.opacity = '0.4';
+        if (claim.score === null) {
+          scoreDiv.style.opacity = '0.4';
+        } else {
+          scoreDiv.style.background = `hsla(${hue}, 35%, 45%, 0.35)`;
+          scoreDiv.style.borderColor = `hsla(${hue}, 40%, 55%, 0.3)`;
+          scoreDiv.style.color = `hsla(${hue}, 50%, 85%, 1)`;
+        }
 
         const textDiv = document.createElement('div');
         textDiv.className = 'claim-text';
@@ -963,7 +1048,7 @@
         expClaimsList.appendChild(claimItem);
       });
 
-      expScoreCircle.textContent = avgScore !== null ? avgScore : '?';
+      expScoreCircle.textContent = avgScore !== null ? Number(avgScore).toFixed(1) : '?';
       if (avgScore === null) expScoreCircle.style.opacity = '0.4';
       else expScoreCircle.style.opacity = '1';
     }
@@ -997,7 +1082,7 @@
                 score: c.score,
                 reasoning: c.reasoning
               }));
-              avgScore = claims.reduce((sum, c) => sum + (c.score || 0), 0) / claims.length;
+              avgScore = Math.round(claims.reduce((sum, c) => sum + (c.score || 0), 0) / claims.length * 10) / 10;
             }
           }
         } catch (err) {
